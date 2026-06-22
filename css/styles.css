@@ -309,7 +309,36 @@ p {
 .bible-controls {
     display: flex;
     gap: 8px;
+    margin-bottom: 12px;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
     margin-bottom: 20px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.connection-status .material-symbols-rounded {
+    font-size: 1rem;
+}
+
+.status-online {
+    background-color: var(--accent-blue-light);
+    color: var(--accent-blue);
+}
+
+.status-offline {
+    background-color: var(--accent-gold-light);
+    color: var(--accent-gold);
 }
 
 .selector-btn {

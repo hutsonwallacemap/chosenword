@@ -152,29 +152,76 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('chapter-select-btn').addEventListener('click', openChapterSelector);
     }
 
-    function renderBibleChapter() {
+    async function renderBibleChapter() {
         const container = document.getElementById('bible-reader-content');
-        if (!window.bibleData) return;
+        const statusDiv = document.getElementById('connection-status');
+        const statusIcon = document.getElementById('status-icon');
+        const statusText = document.getElementById('status-text');
 
-        const bookObj = window.bibleData.find(b => b.book === currentBook);
-        if (!bookObj) return;
-
-        const chapterObj = bookObj.chapters.find(c => c.chapter == currentChapter);
-        
         document.getElementById('book-select-btn').innerHTML = `${currentBook} <span class="material-symbols-rounded">expand_more</span>`;
         document.getElementById('chapter-select-btn').innerHTML = `${currentChapter} <span class="material-symbols-rounded">expand_more</span>`;
+        container.innerHTML = `<div class="placeholder-text">Loading chapter...</div>`;
 
-        if (!chapterObj) {
-            container.innerHTML = `<div class="placeholder-text">Chapter not found.</div>`;
-            return;
+        try {
+            // Attempt to fetch from live API
+            const response = await fetch(`https://api.biblesupersearch.com/api?bible=kjv&reference=${currentBook}%20${currentChapter}`);
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            
+            // Normalize API data
+            const versesObj = data.results[0].verses.kjv[currentChapter];
+            let verses = [];
+            for (let v in versesObj) {
+                verses.push({ verse: parseInt(v), text: versesObj[v].text });
+            }
+
+            // Update UI status to Online
+            if(statusDiv) {
+                statusDiv.className = 'connection-status status-online';
+                statusIcon.textContent = 'cloud_done';
+                statusText.textContent = 'Live API (KJV)';
+            }
+
+            displayVerses(verses, container);
+        } catch (error) {
+            console.warn("Failed to fetch from API, falling back to local bible.js", error);
+            
+            // Update UI status to Offline
+            if(statusDiv) {
+                statusDiv.className = 'connection-status status-offline';
+                statusIcon.textContent = 'cloud_off';
+                statusText.textContent = 'Using Offline Bible';
+            }
+
+            // Fallback to window.bibleData
+            if (!window.bibleData) {
+                container.innerHTML = `<div class="placeholder-text">Please ensure bible.js is loaded correctly.</div>`;
+                return;
+            }
+
+            const bookObj = window.bibleData.find(b => b.book.toLowerCase() === currentBook.toLowerCase());
+            if (!bookObj) {
+                container.innerHTML = `<div class="placeholder-text">Book not found in offline data.</div>`;
+                return;
+            }
+
+            const chapterObj = bookObj.chapters.find(c => c.chapter == currentChapter);
+            if (!chapterObj) {
+                container.innerHTML = `<div class="placeholder-text">Chapter not found in offline data.</div>`;
+                return;
+            }
+
+            displayVerses(chapterObj.verses, container);
         }
+    }
 
+    function displayVerses(verses, container) {
         let html = '';
-        chapterObj.verses.forEach(v => {
+        verses.forEach(v => {
             html += `
                 <div class="verse">
                     <span class="verse-num">${v.verse}</span>
-                    <span class="verse-text" onclick="toggleVerseHighlight(this, '${currentBook}', ${currentChapter}, ${v.verse})">${v.text}</span>
+                    <span class="verse-text" onclick="toggleVerseHighlight(this, '${currentBook}', ${currentChapter}, ${v.verse})">${v.text.replace(/<[^>]*>?/gm, '')}</span>
                 </div>
             `;
         });
