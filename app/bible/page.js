@@ -125,6 +125,10 @@ export default function BibleReader() {
           <option value="kjv_strongs">KJV (Strong's)</option>
           <option value="asvs">ASV (Strong's)</option>
           <option value="kjvpce">KJV PCE</option>
+            <option value="irv">Hindi (IRV)</option>
+          <option value="tamil">Tamil</option>
+          <option value="telugu">Telugu</option>
+          <option value="bengali">Bengali</option>
         </select>
       </div>
 
