@@ -117,7 +117,6 @@ export default function BibleReader() {
           <option value="kjv">KJV</option>
           <option value="web">WEB</option>
           <option value="asv">ASV</option>
-          <option value="bbe">Basic English (BBE)</option>
         </select>
       </div>
 
