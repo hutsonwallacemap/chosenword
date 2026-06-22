@@ -4,8 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // -----------------------------------------------------
     let currentBook = 'Genesis';
     let currentChapter = 1;
+    let currentTranslation = 'kjv';
     let savedVerses = JSON.parse(localStorage.getItem('cw_saved_verses')) || [];
     let savedTeachings = JSON.parse(localStorage.getItem('cw_saved_teachings')) || [];
+
+    const ALL_BOOKS = [
+        "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
+        "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", 
+        "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", 
+        "Isaiah", "Jeremiah", "Lamentations", " Ezekiel", "Daniel", "Hosea", "Joel", "Amos", 
+        "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", 
+        "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", 
+        "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", 
+        "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", 
+        "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
+    ];
 
     initTheme();
     initNavigation();
@@ -164,12 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Attempt to fetch from live API
-            const response = await fetch(`https://api.biblesupersearch.com/api?bible=kjv&reference=${currentBook}%20${currentChapter}`);
+            const translation = document.getElementById('translation-select').value;
+            const response = await fetch(`https://api.biblesupersearch.com/api?bible=${translation}&reference=${currentBook}%20${currentChapter}`);
             if (!response.ok) throw new Error("Network response was not ok");
             const data = await response.json();
             
             // Normalize API data
-            const versesObj = data.results[0].verses.kjv[currentChapter];
+            const versesObj = data.results[0].verses[translation][currentChapter];
             let verses = [];
             for (let v in versesObj) {
                 verses.push({ verse: parseInt(v), text: versesObj[v].text });
@@ -179,7 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if(statusDiv) {
                 statusDiv.className = 'connection-status status-online';
                 statusIcon.textContent = 'cloud_done';
-                statusText.textContent = 'Live API (KJV)';
+                statusText.textContent = `Live API (${translation.toUpperCase()})`;
+                document.getElementById('translation-select').style.display = 'block';
             }
 
             displayVerses(verses, container);
@@ -191,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusDiv.className = 'connection-status status-offline';
                 statusIcon.textContent = 'cloud_off';
                 statusText.textContent = 'Using Offline Bible';
+                document.getElementById('translation-select').style.display = 'none';
             }
 
             // Fallback to window.bibleData
@@ -259,8 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function openBookSelector() {
         modalTitle.textContent = "Select Book";
         let html = '';
-        window.bibleData.forEach(b => {
-            html += `<div class="list-item" onclick="selectBook('${b.book}')">${b.book}</div>`;
+        ALL_BOOKS.forEach(b => {
+            html += `<div class="list-item" onclick="selectBook('${b}')">${b}</div>`;
         });
         selectorList.innerHTML = html;
         selectorList.className = 'selector-list';
@@ -268,19 +284,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openChapterSelector() {
-        const bookObj = window.bibleData.find(b => b.book === currentBook);
-        if (!bookObj) return;
-
+        // Since we allow fetching books that might not be in offline DB, we don't know chapter count.
+        // Let's just provide 1-150 chapters (like Psalms) to let them pick when online.
         modalTitle.textContent = `Select Chapter (${currentBook})`;
         let html = '<div class="grid-list">';
-        bookObj.chapters.forEach(c => {
-            html += `<div class="grid-item" onclick="selectChapter(${c.chapter})">${c.chapter}</div>`;
-        });
+        
+        let maxChapters = 150;
+        // If we are offline and have the book, use exact chapter count
+        if (window.bibleData) {
+            const bookObj = window.bibleData.find(b => b.book.toLowerCase() === currentBook.toLowerCase());
+            if (bookObj) {
+                maxChapters = bookObj.chapters.length;
+            }
+        }
+        
+        for (let i = 1; i <= maxChapters; i++) {
+            html += `<div class="grid-item" onclick="selectChapter(${i})">${i}</div>`;
+        }
         html += '</div>';
         selectorList.innerHTML = html;
         selectorList.className = 'selector-list'; // clear just in case
         modal.classList.remove('hidden');
     }
+
+    // Listen to translation changes
+    document.getElementById('translation-select').addEventListener('change', () => {
+        renderBibleChapter();
+    });
 
     window.selectBook = function(book) {
         currentBook = book;

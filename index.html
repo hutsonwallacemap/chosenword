@@ -79,7 +79,12 @@
             <div class="bible-controls">
                 <button id="book-select-btn" class="selector-btn">Genesis <span class="material-symbols-rounded">expand_more</span></button>
                 <button id="chapter-select-btn" class="selector-btn">1 <span class="material-symbols-rounded">expand_more</span></button>
-                <button id="search-bible-btn" class="icon-btn"><span class="material-symbols-rounded">search</span></button>
+                <select id="translation-select" class="selector-btn" style="flex: 0.6; appearance: none; padding-right: 24px; background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' height=\'24\' viewBox=\'0 -960 960 960\' width=\'24\'><path fill=\'%2364748b\' d=\'M480-360 280-560h400L480-360Z\'/></svg>'); background-repeat: no-repeat; background-position: right 8px center;">
+                    <option value="kjv">KJV</option>
+                    <option value="web">WEB</option>
+                    <option value="asv">ASV</option>
+                </select>
+                <button id="search-bible-btn" class="icon-btn" style="display: none;"><span class="material-symbols-rounded">search</span></button>
             </div>
             
             <!-- Connection Status -->
