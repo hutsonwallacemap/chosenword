@@ -117,6 +117,14 @@ export default function BibleReader() {
           <option value="kjv">KJV</option>
           <option value="web">WEB</option>
           <option value="asv">ASV</option>
+          <option value="net">NET Bible</option>
+          <option value="geneva">Geneva</option>
+          <option value="tyndale">Tyndale</option>
+          <option value="coverdale">Coverdale</option>
+          <option value="bishops">Bishops</option>
+          <option value="kjv_strongs">KJV (Strong's)</option>
+          <option value="asvs">ASV (Strong's)</option>
+          <option value="kjvpce">KJV PCE</option>
         </select>
       </div>
 
