@@ -25,22 +25,45 @@ export default function Header() {
   };
 
   return (
-    <header style={{
+    <header className="glass-panel" style={{
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: '20px 24px',
       position: 'sticky',
       top: 0,
-      backgroundColor: 'var(--bg-primary)',
       zIndex: 100,
-      borderBottom: '1px solid var(--border-color)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span className="material-symbols-rounded" style={{ color: 'var(--accent-gold)', fontSize: '1.8rem' }}>menu_book</span>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Chosen Word</h1>
+        <div style={{ 
+          background: 'var(--accent-gold-grad)', 
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          display: 'flex'
+        }}>
+          <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>menu_book</span>
+        </div>
+        <h1 style={{ 
+          fontSize: '1.6rem', 
+          fontWeight: 800, 
+          margin: 0,
+          background: 'var(--accent-gold-grad)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          Chosen Word
+        </h1>
       </div>
-      <button onClick={toggleTheme} style={{ color: 'var(--text-secondary)' }}>
+      <button onClick={toggleTheme} style={{ 
+        color: 'var(--text-secondary)',
+        backgroundColor: 'var(--bg-secondary)',
+        padding: '10px',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
         <span className="material-symbols-rounded" style={{ fontSize: '1.5rem' }}>
           {isDark ? 'light_mode' : 'dark_mode'}
         </span>
