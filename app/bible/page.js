@@ -190,9 +190,9 @@ export default function BibleReader() {
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
               <option value="irv">Hindi (IRV)</option>
-              <option value="tamil">Tamil</option>
-              <option value="telugu">Telugu</option>
-              <option value="bengali">Bengali</option>
+              <option value="ta_irv">Tamil</option>
+              <option value="te_irv">Telugu</option>
+              <option value="bn_irv">Bengali</option>
             </select>
           </div>
 
@@ -210,9 +210,9 @@ export default function BibleReader() {
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
               <option value="irv">Hindi (IRV)</option>
-              <option value="tamil">Tamil</option>
-              <option value="telugu">Telugu</option>
-              <option value="bengali">Bengali</option>
+              <option value="ta_irv">Tamil</option>
+              <option value="te_irv">Telugu</option>
+              <option value="bn_irv">Bengali</option>
             </select>
           </div>
         </div>
