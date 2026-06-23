@@ -3,6 +3,7 @@ import './globals.css';
 export const metadata = {
   title: 'Chosen Word',
   description: 'A modern, beautiful, and offline-ready Bible application.',
+  manifest: '/manifest.json',
 };
 
 import Header from './components/Header';

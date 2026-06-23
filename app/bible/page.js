@@ -37,50 +37,72 @@ export default function BibleReader() {
   const [verses, setVerses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
   const [savedVerses, setSavedVerses] = useState([]);
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
+  const [offlineData, setOfflineData] = useState(null);
 
   useEffect(() => {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
     setBookmarkedChapters(JSON.parse(localStorage.getItem('cw_bookmarks')) || []);
   }, []);
 
-  useEffect(() => {
     async function fetchChapter() {
       setLoading(true);
       setError('');
       try {
-        let fetchedData = [];
+        let primaryVerses = [];
+        
+        // Helper to get verses from either API or offline JSON
+        const getVerses = async (lang) => {
+          if (lang === 'hindi_offline') {
+            let data = offlineData;
+            if (!data) {
+              const res = await fetch('/hindi_offline.json');
+              if (!res.ok) throw new Error('Failed to load offline Bible');
+              data = await res.json();
+              setOfflineData(data);
+            }
+            const chapterData = data[book]?.[chapter];
+            if (!chapterData) throw new Error('Chapter not found in offline data');
+            
+            let fetched = [];
+            for (let v in chapterData) {
+              fetched.push({ verseNum: parseInt(v), text: chapterData[v] });
+            }
+            return fetched;
+          } else {
+            const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${book}%20${chapter}`);
+            if (!res.ok) throw new Error('Network error');
+            const data = await res.json();
+            if (data.results && data.results[0] && data.results[0].verses) {
+              const versesObj = data.results[0].verses[lang][chapter];
+              let fetched = [];
+              for (let v in versesObj) {
+                fetched.push({ verseNum: parseInt(v), text: versesObj[v].text.replace(/<[^>]*>?/gm, '') });
+              }
+              return fetched;
+            }
+            throw new Error('Chapter not found');
+          }
+        };
 
         // Fetch primary translation
-        const res1 = await fetch(`https://api.biblesupersearch.com/api?bible=${primaryLang}&reference=${book}%20${chapter}`);
-        if (!res1.ok) throw new Error('Network error');
-        const data1 = await res1.json();
-        
-        let primaryVerses = [];
-        if (data1.results && data1.results[0] && data1.results[0].verses) {
-          const versesObj = data1.results[0].verses[primaryLang][chapter];
-          for (let v in versesObj) {
-            primaryVerses.push({ verseNum: parseInt(v), primaryText: versesObj[v].text.replace(/<[^>]*>?/gm, '') });
-          }
-        } else {
-          throw new Error('Chapter not found');
-        }
+        const primaryData = await getVerses(primaryLang);
+        primaryVerses = primaryData.map(v => ({ verseNum: v.verseNum, primaryText: v.text }));
 
         // Fetch secondary translation if selected
         if (secondaryLang !== 'none') {
-          const res2 = await fetch(`https://api.biblesupersearch.com/api?bible=${secondaryLang}&reference=${book}%20${chapter}`);
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2.results && data2.results[0] && data2.results[0].verses) {
-              const versesObj = data2.results[0].verses[secondaryLang][chapter];
-              // Merge secondary verses
-              primaryVerses = primaryVerses.map(v => ({
-                ...v,
-                secondaryText: versesObj[v.verseNum] ? versesObj[v.verseNum].text.replace(/<[^>]*>?/gm, '') : ''
-              }));
-            }
+          try {
+            const secondaryData = await getVerses(secondaryLang);
+            const secMap = {};
+            secondaryData.forEach(v => secMap[v.verseNum] = v.text);
+            
+            primaryVerses = primaryVerses.map(v => ({
+              ...v,
+              secondaryText: secMap[v.verseNum] || ''
+            }));
+          } catch (e) {
+            console.error("Secondary fetch failed", e);
           }
         }
         
@@ -93,7 +115,7 @@ export default function BibleReader() {
       }
     }
     fetchChapter();
-  }, [book, chapter, primaryLang, secondaryLang]);
+  }, [book, chapter, primaryLang, secondaryLang, offlineData]);
 
   // Handle Verse Highlighting
   const toggleHighlight = (verseObj, text, langLabel) => {
@@ -189,7 +211,8 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
-              <option value="irv">Hindi (IRV)</option>
+              <option value="hindi_offline">Hindi (OFFLINE)</option>
+              <option value="irv">Hindi (IRV - Online)</option>
               <option value="ta_irv">Tamil</option>
               <option value="te_irv">Telugu</option>
               <option value="bn_irv">Bengali</option>
@@ -209,7 +232,8 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
-              <option value="irv">Hindi (IRV)</option>
+              <option value="hindi_offline">Hindi (OFFLINE)</option>
+              <option value="irv">Hindi (IRV - Online)</option>
               <option value="ta_irv">Tamil</option>
               <option value="te_irv">Telugu</option>
               <option value="bn_irv">Bengali</option>

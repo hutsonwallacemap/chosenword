@@ -1,17 +1,18 @@
-{
-  "name": "chosenword-v2",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "lucide-react": "^0.378.0"
-  }
+﻿{
+    "name":  "chosenword-v2",
+    "version":  "0.1.0",
+    "private":  true,
+    "scripts":  {
+                    "dev":  "next dev",
+                    "build":  "next build",
+                    "start":  "next start",
+                    "lint":  "next lint"
+                },
+    "dependencies":  {
+                         "next":  "14.2.3",
+                         "react":  "^18",
+                         "react-dom":  "^18",
+                         "lucide-react":  "^0.378.0",
+                         "@ducanh2912/next-pwa":  "^10.2.7"
+                     }
 }
