@@ -46,6 +46,7 @@ export default function BibleReader() {
     setBookmarkedChapters(JSON.parse(localStorage.getItem('cw_bookmarks')) || []);
   }, []);
 
+  useEffect(() => {
     async function fetchChapter() {
       setLoading(true);
       setError('');
