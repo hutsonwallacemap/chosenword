@@ -2,34 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
-const nt30Plan = [
-  { day: 1, title: 'Matthew 1-4' }, { day: 2, title: 'Matthew 5-7' },
-  { day: 3, title: 'Matthew 8-12' }, { day: 4, title: 'Matthew 13-16' },
-  { day: 5, title: 'Matthew 17-21' }, { day: 6, title: 'Matthew 22-25' },
-  { day: 7, title: 'Matthew 26-28' }, { day: 8, title: 'Mark 1-5' },
-  { day: 9, title: 'Mark 6-9' }, { day: 10, title: 'Mark 10-12' },
-  { day: 11, title: 'Mark 13-16' }, { day: 12, title: 'Luke 1-3' },
-  { day: 13, title: 'Luke 4-6' }, { day: 14, title: 'Luke 7-9' },
-  { day: 15, title: 'Luke 10-13' }, { day: 16, title: 'Luke 14-17' },
-  { day: 17, title: 'Luke 18-21' }, { day: 18, title: 'Luke 22-24' },
-  { day: 19, title: 'John 1-4' }, { day: 20, title: 'John 5-8' },
-  { day: 21, title: 'John 9-12' }, { day: 22, title: 'John 13-16' },
-  { day: 23, title: 'John 17-21' }, { day: 24, title: 'Acts 1-5' },
-  { day: 25, title: 'Acts 6-10' }, { day: 26, title: 'Acts 11-15' },
-  { day: 27, title: 'Acts 16-20' }, { day: 28, title: 'Acts 21-28' },
-  { day: 29, title: 'Romans 1-8' }, { day: 30, title: 'Romans 9-16' }
-];
-
-const generatePlan = (days, prefix) => {
-  return Array.from({ length: days }, (_, i) => ({
-    day: i + 1,
-    title: `${prefix} - Day ${i + 1}`
-  }));
-};
-
-const plan180 = generatePlan(180, '6-Month Journey');
-const plan365 = generatePlan(365, 'Bible in One Year');
+import { nt30Plan, plan180, plan365 } from '../data/readingPlans';
 
 export default function PlansPage() {
   const router = useRouter();
