@@ -3,7 +3,8 @@ export const offlineTranslations = [
   { id: 'ASV_offline', name: 'English: ASV', filename: 'ASV' },
   { id: 'BBE_offline', name: 'English: BBE', filename: 'BBE' },
   { id: 'hindi_offline', name: 'Hindi', filename: 'hindi_offline' },
-  { id: 'ta_offline', name: 'Tamil', filename: 'ta_offline' }
+  { id: 'ta_offline', name: 'Tamil', filename: 'ta_offline' },
+  { id: 'hindi_alt_offline', name: 'Hindi (Alt)', filename: 'bible (1)' }
   // To add a new translation:
   // 1. Upload your JSON file to the public/ folder (e.g. telugu.json)
   // 2. Add a new line here: { id: 'telugu_offline', name: 'Telugu', filename: 'telugu' }
