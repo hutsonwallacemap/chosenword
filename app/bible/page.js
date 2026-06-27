@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { offlineTranslations, getTtsLanguage } from '../data/translations';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
