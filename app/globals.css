@@ -165,6 +165,11 @@ button:active {
   box-shadow: 0 0 0 3px var(--accent-blue-light);
 }
 
+.quiz-btn:hover {
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue-light);
+}
+
 .selected-verse {
   background-color: var(--bg-secondary);
   border-left: 3px solid var(--accent-gold);
