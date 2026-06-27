@@ -281,20 +281,32 @@ export default function BibleReader() {
 
     if (!verses.length) return;
 
-    const textToRead = `${book} Chapter ${chapter}. ` + verses.map(v => `${v.verseNum}. ${v.primaryText}`).join('. ');
+    const textToRead = verses.map(v => `${v.verseNum}. ${v.primaryText}`).join('. ');
     const utterance = new SpeechSynthesisUtterance(textToRead);
     
-    // Try to set language based on primaryLang
-    if (primaryLang === 'hindi_offline' || primaryLang === 'irv') utterance.lang = 'hi-IN';
-    else if (primaryLang === 'ta_offline' || primaryLang === 'ta_irv') utterance.lang = 'ta-IN';
-    else if (primaryLang === 'te_irv') utterance.lang = 'te-IN';
-    else if (primaryLang === 'bn_irv') utterance.lang = 'bn-IN';
-    else utterance.lang = 'en-US';
+    let targetLang = 'en-US';
+    if (primaryLang === 'hindi_offline' || primaryLang === 'irv') targetLang = 'hi-IN';
+    else if (primaryLang === 'ta_offline' || primaryLang === 'ta_irv') targetLang = 'ta-IN';
+    else if (primaryLang === 'te_irv') targetLang = 'te-IN';
+    else if (primaryLang === 'bn_irv') targetLang = 'bn-IN';
+    
+    utterance.lang = targetLang;
 
-    utterance.rate = 0.9; // Slightly slower for scripture reading
+    // Try to explicitly set the voice
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang.includes(targetLang) || v.lang.includes(targetLang.split('-')[0]));
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.rate = 0.85; // Slightly slower for scripture reading
 
     utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+    utterance.onerror = (e) => {
+      console.error("Audio playback error:", e);
+      setIsPlaying(false);
+      alert("Audio playback failed. Your device might not have this language voice installed.");
+    };
 
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
