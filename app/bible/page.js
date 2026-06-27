@@ -219,7 +219,20 @@ export default function BibleReader() {
         const data = await res.json();
         
         let text = '';
+        if (Array.isArray(data)) {
+          const bookData = data.find(b => b.name === book);
+          if (bookData) {
+            const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
+            if (chapterData) {
+              const verseData = chapterData.verses.find(v => v.verse.toString() === targetVerseNum);
+              if (verseData) text = verseData.text;
             }
+          }
+        } else {
+          // Object-based schema (like Hindi/Tamil offline)
+          const c = data[book]?.[chapter];
+          if (c && c[targetVerseNum]) {
+            text = c[targetVerseNum].replace(/<[^>]*>?/gm, '');
           }
         }
         
