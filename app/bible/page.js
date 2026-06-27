@@ -41,8 +41,18 @@ export default function BibleReader() {
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
   const [offlineData, setOfflineData] = useState({});
   const [selectedVerse, setSelectedVerse] = useState(null);
+  const [compareModal, setCompareModal] = useState({ isOpen: false, loading: false, data: [] });
   const [verseNotes, setVerseNotes] = useState({});
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
@@ -194,6 +204,102 @@ export default function BibleReader() {
     setSelectedVerse(null);
   };
 
+  const handleCompare = async () => {
+    if (!selectedVerse) return;
+    setCompareModal({ isOpen: true, loading: true, data: [] });
+    const targetVerseNum = selectedVerse.verseObj.verseNum;
+    
+    const compareLangs = [
+      { id: 'AKJV_offline', name: 'AKJV' },
+      { id: 'ASV_offline', name: 'ASV' },
+      { id: 'BBE_offline', name: 'BBE' },
+      { id: 'hindi_offline', name: 'Hindi' },
+      { id: 'ta_offline', name: 'Tamil' }
+    ];
+    
+    let results = [];
+    
+    for (let langObj of compareLangs) {
+      try {
+        const lang = langObj.id;
+        let fileName = lang;
+        if (['AKJV_offline', 'ASV_offline', 'BBE_offline'].includes(lang)) {
+          fileName = lang.replace('_offline', '');
+        }
+        
+        let data = offlineData[lang];
+        if (!data) {
+          const res = await fetch(`/${fileName}.json`);
+          if (res.ok) {
+            data = await res.json();
+            setOfflineData(prev => ({ ...prev, [lang]: data }));
+          }
+        }
+        
+        let text = '';
+        if (data) {
+          if (data.books && Array.isArray(data.books)) {
+            const b = data.books.find(b => b.name === book);
+            if (b) {
+              const c = b.chapters.find(c => c.chapter.toString() === chapter.toString());
+              if (c) {
+                const v = c.verses.find(v => parseInt(v.verse) === targetVerseNum);
+                if (v) text = v.text.replace(/<[^>]*>?/gm, '');
+              }
+            }
+          } else {
+            const c = data[book]?.[chapter];
+            if (c && c[targetVerseNum]) {
+              text = c[targetVerseNum].replace(/<[^>]*>?/gm, '');
+            }
+          }
+        }
+        
+        if (text) {
+          results.push({ name: langObj.name, text });
+        }
+      } catch (e) {
+        console.error(`Error loading compare for ${langObj.name}`, e);
+      }
+    }
+    
+    setCompareModal({ isOpen: true, loading: false, data: results });
+    setSelectedVerse(null);
+  };
+
+  const handlePlayAudio = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      alert("Your browser does not support text-to-speech audio.");
+      return;
+    }
+
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+
+    if (!verses.length) return;
+
+    const textToRead = `${book} Chapter ${chapter}. ` + verses.map(v => `${v.verseNum}. ${v.primaryText}`).join('. ');
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    
+    // Try to set language based on primaryLang
+    if (primaryLang === 'hindi_offline' || primaryLang === 'irv') utterance.lang = 'hi-IN';
+    else if (primaryLang === 'ta_offline' || primaryLang === 'ta_irv') utterance.lang = 'ta-IN';
+    else if (primaryLang === 'te_irv') utterance.lang = 'te-IN';
+    else if (primaryLang === 'bn_irv') utterance.lang = 'bn-IN';
+    else utterance.lang = 'en-US';
+
+    utterance.rate = 0.9; // Slightly slower for scripture reading
+
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
+
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
+  };
+
   const isHighlighted = (verseNum, text) => {
     const ref = `${book} ${chapter}:${verseNum}`;
     return savedVerses.some(v => v.ref === ref && v.text === text);
@@ -258,6 +364,27 @@ export default function BibleReader() {
             }}
           >
             <span className="material-symbols-rounded" style={{ fontVariationSettings: isChapterBookmarked() ? "'FILL' 1" : "'FILL' 0" }}>bookmark</span>
+          </button>
+          
+          {/* Audio Play Button */}
+          <button 
+            onClick={handlePlayAudio}
+            style={{ 
+              backgroundColor: isPlaying ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+              color: isPlaying ? 'white' : 'var(--text-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid',
+              borderColor: isPlaying ? 'var(--accent-blue)' : 'var(--border-color)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span className="material-symbols-rounded" style={{ fontVariationSettings: isPlaying ? "'FILL' 1" : "'FILL' 0" }}>
+              {isPlaying ? 'stop_circle' : 'volume_up'}
+            </span>
           </button>
         </div>
 
@@ -428,6 +555,49 @@ export default function BibleReader() {
               <span className="material-symbols-rounded">share</span>
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
             </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
+            <button 
+              onClick={handleCompare}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
+            >
+              <span className="material-symbols-rounded">difference</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Compare Modal */}
+      {compareModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Verse Comparison</h3>
+              <button 
+                onClick={() => setCompareModal({ isOpen: false, loading: false, data: [] })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            
+            <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {compareModal.loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px 0' }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: '2rem', animation: 'spin 2s linear infinite', color: 'var(--accent-blue)' }}>autorenew</span>
+                  <p style={{ color: 'var(--text-secondary)' }}>Loading translations...</p>
+                </div>
+              ) : compareModal.data.length > 0 ? (
+                compareModal.data.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '12px', borderBottom: idx !== compareModal.data.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>{item.name}</span>
+                    <p style={{ margin: 0, fontSize: '1.1rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>{item.text}</p>
+                  </div>
+                ))
+              ) : (
+                <p>No comparisons available.</p>
+              )}
+            </div>
           </div>
         </div>
       )}

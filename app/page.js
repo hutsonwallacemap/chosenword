@@ -165,7 +165,7 @@ export default function Home() {
 
       <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '-16px', paddingLeft: '8px' }}>Explore</h3>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Link href="/bible" className="card" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -204,6 +204,26 @@ export default function Home() {
             <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>search</span>
           </div>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Search</h3>
+        </Link>
+
+        <Link href="/plans" className="card" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          textDecoration: 'none',
+          padding: '16px 12px'
+        }}>
+          <div style={{
+            background: '#fce7f3', // pink-100
+            padding: '12px',
+            borderRadius: '50%',
+            display: 'flex',
+            color: '#db2777' // pink-600
+          }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>library_books</span>
+          </div>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Plans</h3>
         </Link>
 
         <Link href="/saved" className="card" style={{
