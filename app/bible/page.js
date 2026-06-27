@@ -57,7 +57,11 @@ export default function BibleReader() {
         // Helper to get verses from either API or offline JSON
         const getVerses = async (lang) => {
           if (lang.endsWith('_offline')) {
-            const fileName = lang === 'hindi_offline' ? 'hindi_offline' : lang.replace('_offline', '');
+            let fileName = lang;
+            if (['AKJV_offline', 'ASV_offline', 'BBE_offline'].includes(lang)) {
+              fileName = lang.replace('_offline', '');
+            }
+            
             let data = offlineData[lang];
             if (!data) {
               const res = await fetch(`/${fileName}.json`);
