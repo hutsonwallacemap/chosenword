@@ -85,7 +85,15 @@ export default function BibleReader() {
             }
 
             // Handle new JSON format (Array of books)
-            if (data.books && Array.isArray(data.books)) {
+            if (data.verses && Array.isArray(data.verses)) {
+              const chapterVerses = data.verses.filter(v => v.book_name === book && v.chapter.toString() === chapter.toString());
+              if (chapterVerses.length === 0) throw new Error('Chapter not found in offline data');
+              return chapterVerses.map(v => ({
+                verseNum: parseInt(v.verse),
+                text: v.text.replace(/<[^>]*>?/gm, '')
+              }));
+            }
+            else if (data.books && Array.isArray(data.books)) {
               const bookData = data.books.find(b => b.name === book);
               if (!bookData) throw new Error('Book not found in offline data');
               const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
@@ -219,7 +227,10 @@ export default function BibleReader() {
         const data = await res.json();
         
         let text = '';
-        if (Array.isArray(data)) {
+        if (data.verses && Array.isArray(data.verses)) {
+          const verseData = data.verses.find(v => v.book_name === book && v.chapter.toString() === chapter.toString() && v.verse.toString() === targetVerseNum);
+          if (verseData) text = verseData.text;
+        } else if (Array.isArray(data)) {
           const bookData = data.find(b => b.name === book);
           if (bookData) {
             const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());

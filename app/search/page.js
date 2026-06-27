@@ -43,8 +43,22 @@ export default function SearchPage() {
       const searchResults = [];
       const lowerQuery = query.toLowerCase();
 
-      // Handle new JSON format (Array of books)
-      if (data.books && Array.isArray(data.books)) {
+      // Handle new JSON format (Flat Array of Verses)
+      if (data.verses && Array.isArray(data.verses)) {
+        for (const verse of data.verses) {
+          if (verse.text && verse.text.toLowerCase().includes(lowerQuery)) {
+            searchResults.push({
+              book: verse.book_name,
+              chapter: verse.chapter,
+              verse: verse.verse,
+              text: verse.text.replace(/<[^>]*>?/gm, '')
+            });
+            if (searchResults.length >= 100) break;
+          }
+        }
+      }
+      // Handle older JSON format (Array of books)
+      else if (data.books && Array.isArray(data.books)) {
         for (const book of data.books) {
           for (const chapter of book.chapters) {
             for (const verse of chapter.verses) {

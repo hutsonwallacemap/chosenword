@@ -4,7 +4,18 @@ export const offlineTranslations = [
   { id: 'BBE_offline', name: 'English: BBE', filename: 'BBE' },
   { id: 'hindi_offline', name: 'Hindi', filename: 'hindi_offline' },
   { id: 'ta_offline', name: 'Tamil', filename: 'ta_offline' },
-  { id: 'hindi_alt_offline', name: 'Hindi (Alt)', filename: 'bible (1)' }
+  { id: 'hindi_alt_offline', name: 'Hindi (Alt)', filename: 'bible (1)' },
+  { id: 'asv_new', name: 'ASV (New)', filename: 'asv' },
+  { id: 'asvs', name: 'ASVS', filename: 'asvs' },
+  { id: 'bishops', name: 'Bishops', filename: 'bishops' },
+  { id: 'coverdale', name: 'Coverdale', filename: 'coverdale' },
+  { id: 'geneva', name: 'Geneva', filename: 'geneva' },
+  { id: 'kjv_new', name: 'KJV', filename: 'kjv' },
+  { id: 'kjv_strongs', name: 'KJV (Strongs)', filename: 'kjv_strongs' },
+  { id: 'kjvpce', name: 'KJV PCE', filename: 'kjvpce' },
+  { id: 'net', name: 'NET', filename: 'net' },
+  { id: 'tyndale', name: 'Tyndale', filename: 'tyndale' },
+  { id: 'web', name: 'WEB', filename: 'web' }
   // To add a new translation:
   // 1. Upload your JSON file to the public/ folder (e.g. telugu.json)
   // 2. Add a new line here: { id: 'telugu_offline', name: 'Telugu', filename: 'telugu' }
