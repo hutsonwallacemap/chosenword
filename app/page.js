@@ -16,6 +16,7 @@ function mulberry32(a) {
 export default function Home() {
   const [dailyData, setDailyData] = useState(null);
   const [quizState, setQuizState] = useState({});
+  const [streaks, setStreaks] = useState({ current: 0, longest: 0 });
 
   useEffect(() => {
     // Calculate Day of Year (1-365)
@@ -47,6 +48,40 @@ export default function Home() {
     if (savedState) {
       setQuizState(JSON.parse(savedState));
     }
+
+    // Streaks Logic
+    const todayStr = now.toDateString();
+    const lastOpen = localStorage.getItem('cw_last_open');
+    let currentStreak = parseInt(localStorage.getItem('cw_current_streak') || '0');
+    let longestStreak = parseInt(localStorage.getItem('cw_longest_streak') || '0');
+
+    if (lastOpen !== todayStr) {
+      if (lastOpen) {
+        const lastDate = new Date(lastOpen);
+        const diffDays = Math.floor((now - lastDate) / oneDay);
+        
+        if (diffDays === 1) {
+          // Opened yesterday, continue streak
+          currentStreak += 1;
+        } else if (diffDays > 1) {
+          // Missed a day, reset streak
+          currentStreak = 1;
+        }
+      } else {
+        // First time opening
+        currentStreak = 1;
+      }
+
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+        localStorage.setItem('cw_longest_streak', longestStreak.toString());
+      }
+
+      localStorage.setItem('cw_current_streak', currentStreak.toString());
+      localStorage.setItem('cw_last_open', todayStr);
+    }
+    
+    setStreaks({ current: currentStreak, longest: longestStreak });
   }, []);
 
   const handleQuizAnswer = (quizIndex, selectedOptionIndex) => {
@@ -67,6 +102,33 @@ export default function Home() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
+      {/* Streaks Banner */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        background: 'var(--bg-secondary)',
+        padding: '12px 20px',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="material-symbols-rounded" style={{ color: '#f97316', fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Current Streak</p>
+            <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.current} Day{streaks.current !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+        <div style={{ height: '30px', width: '1px', background: 'var(--border-color)' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="material-symbols-rounded" style={{ color: '#eab308', fontVariationSettings: "'FILL' 1" }}>military_tech</span>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Streak</p>
+            <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.longest} Day{streaks.longest !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Verse of the Day Card */}
       <div style={{
         backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(https://picsum.photos/seed/${dailyData.day}/800/600)`,
@@ -103,43 +165,65 @@ export default function Home() {
 
       <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '-16px', paddingLeft: '8px' }}>Explore</h3>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
         <Link href="/bible" className="card" style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
-          textDecoration: 'none'
+          gap: '12px',
+          textDecoration: 'none',
+          padding: '16px 12px'
         }}>
           <div style={{
             background: 'var(--accent-blue-light)',
-            padding: '16px',
+            padding: '12px',
             borderRadius: '50%',
             display: 'flex',
             color: 'var(--accent-blue)'
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2.5rem' }}>auto_stories</span>
+            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>auto_stories</span>
           </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Read Bible</h3>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Read Bible</h3>
         </Link>
         
+        <Link href="/search" className="card" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          textDecoration: 'none',
+          padding: '16px 12px'
+        }}>
+          <div style={{
+            background: '#e0e7ff', // indigo-100
+            padding: '12px',
+            borderRadius: '50%',
+            display: 'flex',
+            color: '#4f46e5' // indigo-600
+          }}>
+            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>search</span>
+          </div>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Search</h3>
+        </Link>
+
         <Link href="/saved" className="card" style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
-          textDecoration: 'none'
+          gap: '12px',
+          textDecoration: 'none',
+          padding: '16px 12px'
         }}>
           <div style={{
             background: 'var(--accent-gold-light)',
-            padding: '16px',
+            padding: '12px',
             borderRadius: '50%',
             display: 'flex',
             color: 'var(--accent-gold)'
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2.5rem' }}>bookmark</span>
+            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>bookmark</span>
           </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Saved Items</h3>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Saved</h3>
         </Link>
       </div>
 

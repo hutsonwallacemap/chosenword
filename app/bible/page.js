@@ -41,10 +41,13 @@ export default function BibleReader() {
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
   const [offlineData, setOfflineData] = useState({});
   const [selectedVerse, setSelectedVerse] = useState(null);
+  const [verseNotes, setVerseNotes] = useState({});
+  const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
 
   useEffect(() => {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
     setBookmarkedChapters(JSON.parse(localStorage.getItem('cw_bookmarks')) || []);
+    setVerseNotes(JSON.parse(localStorage.getItem('cw_notes')) || {});
   }, []);
 
   useEffect(() => {
@@ -178,6 +181,17 @@ export default function BibleReader() {
     } catch (err) {
       console.error("Error sharing", err);
     }
+  };
+
+  const handleSaveNote = () => {
+    const newNotes = { ...verseNotes, [noteModal.verseRef]: noteModal.text };
+    if (!noteModal.text.trim()) {
+      delete newNotes[noteModal.verseRef];
+    }
+    setVerseNotes(newNotes);
+    localStorage.setItem('cw_notes', JSON.stringify(newNotes));
+    setNoteModal({ isOpen: false, verseRef: '', text: '' });
+    setSelectedVerse(null);
   };
 
   const isHighlighted = (verseNum, text) => {
@@ -331,10 +345,13 @@ export default function BibleReader() {
                 <p 
                   className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.primaryText ? 'selected-verse' : ''}`}
                   onClick={() => setSelectedVerse({ verseObj: v, text: v.primaryText, langLabel: primaryLang })}
-                  style={{ fontSize: '1.2rem', margin: 0, cursor: 'pointer', lineHeight: 1.5 }}
+                  style={{ fontSize: '1.2rem', margin: 0, cursor: 'pointer', lineHeight: 1.5, display: 'inline' }}
                 >
                   {v.primaryText}
                 </p>
+                {verseNotes[`${book} ${chapter}:${v.verseNum}`] && (
+                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px' }}>sticky_note_2</span>
+                )}
 
                 {/* Secondary Verse (Dual Mode) */}
                 {secondaryLang !== 'none' && v.secondaryText && (
@@ -394,12 +411,53 @@ export default function BibleReader() {
             </button>
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
             <button 
+              onClick={() => {
+                const ref = `${book} ${chapter}:${selectedVerse.verseObj.verseNum}`;
+                setNoteModal({ isOpen: true, verseRef: ref, text: verseNotes[ref] || '' });
+              }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
+            >
+              <span className="material-symbols-rounded">edit_note</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Note</span>
+            </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
+            <button 
               onClick={handleShare}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
             >
               <span className="material-symbols-rounded">share</span>
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Note Modal */}
+      {noteModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Note for {noteModal.verseRef}</h3>
+            <textarea
+              autoFocus
+              value={noteModal.text}
+              onChange={(e) => setNoteModal({ ...noteModal, text: e.target.value })}
+              style={{ width: '100%', height: '120px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', resize: 'none', fontFamily: 'inherit', fontSize: '1rem' }}
+              placeholder="Write your thoughts here..."
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setNoteModal({ isOpen: false, verseRef: '', text: '' })}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--bg-secondary)', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveNote}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--accent-blue)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Save Note
+              </button>
+            </div>
           </div>
         </div>
       )}
