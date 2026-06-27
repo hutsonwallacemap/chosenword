@@ -65,7 +65,7 @@ export default function PlansPage() {
         </div>
         
         <div style={{ width: '100%', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ width: \`\${progressPercent}%\`, height: '100%', background: 'var(--accent-blue)', transition: 'width 0.3s ease' }}></div>
+          <div style={{ width: `${progressPercent}%`, height: '100%', background: 'var(--accent-blue)', transition: 'width 0.3s ease' }}></div>
         </div>
       </div>
 
