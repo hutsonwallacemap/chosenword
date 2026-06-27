@@ -164,3 +164,24 @@ button:active {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px var(--accent-blue-light);
 }
+
+.selected-verse {
+  background-color: var(--bg-secondary);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 8px 12px;
+  margin-left: -15px;
+  margin-right: -12px;
+  transition: all 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}

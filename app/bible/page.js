@@ -40,6 +40,7 @@ export default function BibleReader() {
   const [savedVerses, setSavedVerses] = useState([]);
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
   const [offlineData, setOfflineData] = useState({});
+  const [selectedVerse, setSelectedVerse] = useState(null);
 
   useEffect(() => {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
@@ -146,6 +147,33 @@ export default function BibleReader() {
     }
     setSavedVerses(newSaved);
     localStorage.setItem('cw_saved_verses', JSON.stringify(newSaved));
+  };
+
+  // Action Menu Handlers
+  const handleCopy = async () => {
+    if (!selectedVerse) return;
+    try {
+      await navigator.clipboard.writeText(`${book} ${chapter}:${selectedVerse.verseObj.verseNum} - ${selectedVerse.text}`);
+      setSelectedVerse(null);
+    } catch (err) {
+      console.error("Failed to copy", err);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!selectedVerse) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Chosen Word - ${book} ${chapter}:${selectedVerse.verseObj.verseNum}`,
+          text: `${selectedVerse.text} (${book} ${chapter}:${selectedVerse.verseObj.verseNum})`,
+          url: window.location.href
+        });
+      }
+      setSelectedVerse(null);
+    } catch (err) {
+      console.error("Error sharing", err);
+    }
   };
 
   const isHighlighted = (verseNum, text) => {
@@ -295,8 +323,8 @@ export default function BibleReader() {
               <div style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {/* Primary Verse */}
                 <p 
-                  className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''}`}
-                  onClick={() => toggleHighlight(v, v.primaryText, primaryLang)}
+                  className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.primaryText ? 'selected-verse' : ''}`}
+                  onClick={() => setSelectedVerse({ verseObj: v, text: v.primaryText, langLabel: primaryLang })}
                   style={{ fontSize: '1.2rem', margin: 0, cursor: 'pointer', lineHeight: 1.5 }}
                 >
                   {v.primaryText}
@@ -305,16 +333,14 @@ export default function BibleReader() {
                 {/* Secondary Verse (Dual Mode) */}
                 {secondaryLang !== 'none' && v.secondaryText && (
                   <p 
-                    className={`verse-item ${isHighlighted(v.verseNum, v.secondaryText) ? 'highlighted' : ''}`}
-                    onClick={() => toggleHighlight(v, v.secondaryText, secondaryLang)}
+                    className={`verse-item ${isHighlighted(v.verseNum, v.secondaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.secondaryText ? 'selected-verse' : ''}`}
+                    onClick={() => setSelectedVerse({ verseObj: v, text: v.secondaryText, langLabel: secondaryLang })}
                     style={{ 
                       fontSize: '1.1rem', 
                       margin: 0, 
                       cursor: 'pointer', 
-                      color: isHighlighted(v.verseNum, v.secondaryText) ? 'var(--accent-gold)' : 'var(--text-secondary)',
                       lineHeight: 1.5,
-                      borderLeft: '2px solid var(--border-color)',
-                      paddingLeft: '12px'
+                      color: 'var(--text-secondary)'
                     }}
                   >
                     {v.secondaryText}
@@ -326,8 +352,55 @@ export default function BibleReader() {
         </div>
       )}
 
+      {/* Floating Action Menu Overlay */}
+      {selectedVerse && (
+        <div 
+          onClick={() => setSelectedVerse(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '80px' }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="glass-panel"
+            style={{
+              padding: '12px 24px',
+              borderRadius: '100px',
+              display: 'flex',
+              gap: '24px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}
+          >
+            <button 
+              onClick={() => { toggleHighlight(selectedVerse.verseObj, selectedVerse.text, selectedVerse.langLabel); setSelectedVerse(null); }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? 'var(--accent-gold)' : 'var(--text-primary)' }}
+            >
+              <span className="material-symbols-rounded" style={{ fontVariationSettings: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? "'FILL' 1" : "'FILL' 0" }}>format_ink_highlighter</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Highlight</span>
+            </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
+            <button 
+              onClick={handleCopy}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
+            >
+              <span className="material-symbols-rounded">content_copy</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Copy</span>
+            </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
+            <button 
+              onClick={handleShare}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
+            >
+              <span className="material-symbols-rounded">share</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
     </div>
   );
