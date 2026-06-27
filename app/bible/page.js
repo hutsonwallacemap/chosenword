@@ -261,8 +261,9 @@ export default function BibleReader() {
               <option value="ASV_offline">English: ASV (OFFLINE)</option>
               <option value="BBE_offline">English: BBE (OFFLINE)</option>
               <option value="hindi_offline">Hindi (OFFLINE)</option>
+              <option value="ta_offline">Tamil (OFFLINE)</option>
               <option value="irv">Hindi (IRV - Online)</option>
-              <option value="ta_irv">Tamil</option>
+              <option value="ta_irv">Tamil (Online)</option>
               <option value="te_irv">Telugu</option>
               <option value="bn_irv">Bengali</option>
             </select>
@@ -285,8 +286,9 @@ export default function BibleReader() {
               <option value="ASV_offline">English: ASV (OFFLINE)</option>
               <option value="BBE_offline">English: BBE (OFFLINE)</option>
               <option value="hindi_offline">Hindi (OFFLINE)</option>
+              <option value="ta_offline">Tamil (OFFLINE)</option>
               <option value="irv">Hindi (IRV - Online)</option>
-              <option value="ta_irv">Tamil</option>
+              <option value="ta_irv">Tamil (Online)</option>
               <option value="te_irv">Telugu</option>
               <option value="bn_irv">Bengali</option>
             </select>
