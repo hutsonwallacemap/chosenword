@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { offlineTranslations } from '../data/translations';
 
 export default function SearchPage() {
   const router = useRouter();
@@ -24,12 +25,11 @@ export default function SearchPage() {
     
     try {
       let fileName = translation;
-      if (['AKJV_offline', 'ASV_offline', 'BBE_offline'].includes(translation)) {
+      const configLang = offlineTranslations.find(t => t.id === translation);
+      if (configLang) {
+        fileName = configLang.filename;
+      } else if (translation.endsWith('_offline')) {
         fileName = translation.replace('_offline', '');
-      } else if (translation === 'hindi_offline') {
-        fileName = 'hindi_offline';
-      } else if (translation === 'ta_offline') {
-        fileName = 'ta_offline';
       }
 
       let data = offlineDataCache[fileName];
@@ -134,11 +134,9 @@ export default function SearchPage() {
               onChange={(e) => setTranslation(e.target.value)}
               style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
             >
-              <option value="AKJV_offline">English: AKJV (Fast Offline)</option>
-              <option value="ASV_offline">English: ASV (Fast Offline)</option>
-              <option value="BBE_offline">English: BBE (Fast Offline)</option>
-              <option value="hindi_offline">Hindi (Fast Offline)</option>
-              <option value="ta_offline">Tamil (Fast Offline)</option>
+              {offlineTranslations.map(t => (
+                <option key={t.id} value={t.id}>{t.name} (Fast Offline)</option>
+              ))}
             </select>
           </div>
           

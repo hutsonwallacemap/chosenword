@@ -70,14 +70,15 @@ export default function BibleReader() {
         // Helper to get verses from either API or offline JSON
         const getVerses = async (lang) => {
           if (lang.endsWith('_offline')) {
-            let fileName = lang;
-            if (['AKJV_offline', 'ASV_offline', 'BBE_offline'].includes(lang)) {
-              fileName = lang.replace('_offline', '');
+            let baseFilename = lang.replace('_offline', '');
+            const configLang = offlineTranslations.find(t => t.id === lang);
+            if (configLang) {
+              baseFilename = configLang.filename;
             }
             
             let data = offlineData[lang];
             if (!data) {
-              const res = await fetch(`/${fileName}.json`);
+              const res = await fetch(`/${baseFilename}.json`);
               if (!res.ok) throw new Error('Failed to load offline Bible');
               data = await res.json();
               setOfflineData(prev => ({ ...prev, [lang]: data }));
@@ -207,50 +208,17 @@ export default function BibleReader() {
   const handleCompare = async () => {
     if (!selectedVerse) return;
     setCompareModal({ isOpen: true, loading: true, data: [] });
-    const targetVerseNum = selectedVerse.verseObj.verseNum;
     
-    const compareLangs = [
-      { id: 'AKJV_offline', name: 'AKJV' },
-      { id: 'ASV_offline', name: 'ASV' },
-      { id: 'BBE_offline', name: 'BBE' },
-      { id: 'hindi_offline', name: 'Hindi' },
-      { id: 'ta_offline', name: 'Tamil' }
-    ];
-    
-    let results = [];
-    
-    for (let langObj of compareLangs) {
+    const results = [];
+    const targetVerseNum = selectedVerse.verseObj.verseNum.toString();
+
+    for (const langObj of offlineTranslations) {
       try {
-        const lang = langObj.id;
-        let fileName = lang;
-        if (['AKJV_offline', 'ASV_offline', 'BBE_offline'].includes(lang)) {
-          fileName = lang.replace('_offline', '');
-        }
-        
-        let data = offlineData[lang];
-        if (!data) {
-          const res = await fetch(`/${fileName}.json`);
-          if (res.ok) {
-            data = await res.json();
-            setOfflineData(prev => ({ ...prev, [lang]: data }));
-          }
-        }
+        const res = await fetch(`/${langObj.filename}.json`);
+        if (!res.ok) continue;
+        const data = await res.json();
         
         let text = '';
-        if (data) {
-          if (data.books && Array.isArray(data.books)) {
-            const b = data.books.find(b => b.name === book);
-            if (b) {
-              const c = b.chapters.find(c => c.chapter.toString() === chapter.toString());
-              if (c) {
-                const v = c.verses.find(v => parseInt(v.verse) === targetVerseNum);
-                if (v) text = v.text.replace(/<[^>]*>?/gm, '');
-              }
-            }
-          } else {
-            const c = data[book]?.[chapter];
-            if (c && c[targetVerseNum]) {
-              text = c[targetVerseNum].replace(/<[^>]*>?/gm, '');
             }
           }
         }
@@ -284,12 +252,7 @@ export default function BibleReader() {
     const textToRead = verses.map(v => `${v.verseNum}. ${v.primaryText}`).join('. ');
     const utterance = new SpeechSynthesisUtterance(textToRead);
     
-    let targetLang = 'en-US';
-    if (primaryLang === 'hindi_offline' || primaryLang === 'irv') targetLang = 'hi-IN';
-    else if (primaryLang === 'ta_offline' || primaryLang === 'ta_irv') targetLang = 'ta-IN';
-    else if (primaryLang === 'te_irv') targetLang = 'te-IN';
-    else if (primaryLang === 'bn_irv') targetLang = 'bn-IN';
-    
+    let targetLang = getTtsLanguage(primaryLang);
     utterance.lang = targetLang;
 
     // Try to explicitly set the voice
@@ -414,15 +377,17 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
-              <option value="AKJV_offline">English: AKJV (OFFLINE)</option>
-              <option value="ASV_offline">English: ASV (OFFLINE)</option>
-              <option value="BBE_offline">English: BBE (OFFLINE)</option>
-              <option value="hindi_offline">Hindi (OFFLINE)</option>
-              <option value="ta_offline">Tamil (OFFLINE)</option>
-              <option value="irv">Hindi (IRV - Online)</option>
-              <option value="ta_irv">Tamil (Online)</option>
-              <option value="te_irv">Telugu</option>
-              <option value="bn_irv">Bengali</option>
+              <optgroup label="Offline">
+                {offlineTranslations.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
+                ))}
+              </optgroup>
+              <optgroup label="Online">
+                <option value="irv">Hindi (IRV - Online)</option>
+                <option value="ta_irv">Tamil (Online)</option>
+                <option value="te_irv">Telugu</option>
+                <option value="bn_irv">Bengali</option>
+              </optgroup>
             </select>
           </div>
 
@@ -439,15 +404,17 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
-              <option value="AKJV_offline">English: AKJV (OFFLINE)</option>
-              <option value="ASV_offline">English: ASV (OFFLINE)</option>
-              <option value="BBE_offline">English: BBE (OFFLINE)</option>
-              <option value="hindi_offline">Hindi (OFFLINE)</option>
-              <option value="ta_offline">Tamil (OFFLINE)</option>
-              <option value="irv">Hindi (IRV - Online)</option>
-              <option value="ta_irv">Tamil (Online)</option>
-              <option value="te_irv">Telugu</option>
-              <option value="bn_irv">Bengali</option>
+              <optgroup label="Offline">
+                {offlineTranslations.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
+                ))}
+              </optgroup>
+              <optgroup label="Online">
+                <option value="irv">Hindi (IRV - Online)</option>
+                <option value="ta_irv">Tamil (Online)</option>
+                <option value="te_irv">Telugu</option>
+                <option value="bn_irv">Bengali</option>
+              </optgroup>
             </select>
           </div>
         </div>
