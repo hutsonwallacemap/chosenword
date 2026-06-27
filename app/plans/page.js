@@ -21,22 +21,57 @@ const nt30Plan = [
   { day: 29, title: 'Romans 1-8' }, { day: 30, title: 'Romans 9-16' }
 ];
 
+const generatePlan = (days, prefix) => {
+  return Array.from({ length: days }, (_, i) => ({
+    day: i + 1,
+    title: `${prefix} - Day ${i + 1}`
+  }));
+};
+
+const plan180 = generatePlan(180, '6-Month Journey');
+const plan365 = generatePlan(365, 'Bible in One Year');
+
 export default function PlansPage() {
   const router = useRouter();
-  const [progress, setProgress] = useState({});
+  
+  // Available plans
+  const plans = [
+    { id: '30day', name: '30 Days', desc: 'New Testament Intro', data: nt30Plan, total: 30 },
+    { id: '6month', name: '6 Months', desc: 'Accelerated Journey', data: plan180, total: 180 },
+    { id: '1year', name: '1 Year', desc: 'Complete Bible', data: plan365, total: 365 }
+  ];
+
+  const [activePlanId, setActivePlanId] = useState('30day');
+  const [allProgress, setAllProgress] = useState({
+    '30day': {},
+    '6month': {},
+    '1year': {}
+  });
 
   useEffect(() => {
-    setProgress(JSON.parse(localStorage.getItem('cw_plan_nt30')) || {});
+    setAllProgress({
+      '30day': JSON.parse(localStorage.getItem('cw_plan_30day')) || {},
+      '6month': JSON.parse(localStorage.getItem('cw_plan_6month')) || {},
+      '1year': JSON.parse(localStorage.getItem('cw_plan_1year')) || {}
+    });
   }, []);
 
+  const activePlan = plans.find(p => p.id === activePlanId);
+  const activeProgress = allProgress[activePlanId] || {};
+
   const toggleDay = (day) => {
-    const newProgress = { ...progress, [day]: !progress[day] };
-    setProgress(newProgress);
-    localStorage.setItem('cw_plan_nt30', JSON.stringify(newProgress));
+    const newProgress = { ...activeProgress, [day]: !activeProgress[day] };
+    
+    setAllProgress(prev => ({
+      ...prev,
+      [activePlanId]: newProgress
+    }));
+    
+    localStorage.setItem(`cw_plan_${activePlanId}`, JSON.stringify(newProgress));
   };
 
-  const completedCount = Object.values(progress).filter(Boolean).length;
-  const progressPercent = Math.round((completedCount / 30) * 100);
+  const completedCount = Object.values(activeProgress).filter(Boolean).length;
+  const progressPercent = Math.round((completedCount / activePlan.total) * 100);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -50,17 +85,41 @@ export default function PlansPage() {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Reading Plans</h1>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+        {plans.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setActivePlanId(p.id)}
+            style={{
+              padding: '12px 20px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: activePlanId === p.id ? 'var(--text-primary)' : 'var(--bg-secondary)',
+              color: activePlanId === p.id ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
       <div className="card" style={{ padding: '24px', background: 'linear-gradient(135deg, var(--accent-blue-light), var(--bg-secondary))', border: '1px solid var(--accent-blue)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>Featured Plan</span>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '4px 0', color: 'var(--text-primary)' }}>30-Day Gospels & Acts</h2>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>{activePlan.desc}</span>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '4px 0', color: 'var(--text-primary)' }}>{activePlan.name} Plan</h2>
           </div>
           <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', color: 'var(--accent-blue)' }}>library_books</span>
         </div>
         
         <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{completedCount} of 30 Days</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{completedCount} of {activePlan.total} Days</span>
           <span style={{ fontWeight: 800, color: 'var(--accent-blue)' }}>{progressPercent}%</span>
         </div>
         
@@ -72,7 +131,7 @@ export default function PlansPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-secondary)', paddingLeft: '8px', marginBottom: '8px' }}>Daily Schedule</h3>
         
-        {nt30Plan.map((p) => (
+        {activePlan.data.map((p) => (
           <div 
             key={p.day}
             className="card"
@@ -82,9 +141,9 @@ export default function PlansPage() {
               alignItems: 'center', 
               justifyContent: 'space-between',
               cursor: 'pointer',
-              opacity: progress[p.day] ? 0.6 : 1,
+              opacity: activeProgress[p.day] ? 0.6 : 1,
               transition: 'all 0.2s',
-              borderLeft: progress[p.day] ? '4px solid #22c55e' : '4px solid transparent'
+              borderLeft: activeProgress[p.day] ? '4px solid #22c55e' : '4px solid transparent'
             }}
             onClick={() => toggleDay(p.day)}
           >
@@ -93,15 +152,15 @@ export default function PlansPage() {
                 width: '40px', 
                 height: '40px', 
                 borderRadius: '50%', 
-                background: progress[p.day] ? '#dcfce7' : 'var(--bg-secondary)', 
+                background: activeProgress[p.day] ? '#dcfce7' : 'var(--bg-secondary)', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                color: progress[p.day] ? '#166534' : 'var(--text-secondary)'
+                color: activeProgress[p.day] ? '#166534' : 'var(--text-secondary)'
               }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.day}</span>
               </div>
-              <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: progress[p.day] ? 500 : 600, color: 'var(--text-primary)', textDecoration: progress[p.day] ? 'line-through' : 'none' }}>
+              <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: activeProgress[p.day] ? 500 : 600, color: 'var(--text-primary)', textDecoration: activeProgress[p.day] ? 'line-through' : 'none' }}>
                 {p.title}
               </p>
             </div>
@@ -110,13 +169,13 @@ export default function PlansPage() {
               width: '24px', 
               height: '24px', 
               borderRadius: '50%', 
-              border: progress[p.day] ? '2px solid #22c55e' : '2px solid var(--border-color)',
-              background: progress[p.day] ? '#22c55e' : 'transparent',
+              border: activeProgress[p.day] ? '2px solid #22c55e' : '2px solid var(--border-color)',
+              background: activeProgress[p.day] ? '#22c55e' : 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              {progress[p.day] && <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'white', fontVariationSettings: "'FILL' 1" }}>check</span>}
+              {activeProgress[p.day] && <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'white', fontVariationSettings: "'FILL' 1" }}>check</span>}
             </div>
           </div>
         ))}
