@@ -39,7 +39,7 @@ export default function BibleReader() {
   const [error, setError] = useState('');
   const [savedVerses, setSavedVerses] = useState([]);
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
-  const [offlineData, setOfflineData] = useState(null);
+  const [offlineData, setOfflineData] = useState({});
 
   useEffect(() => {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
@@ -55,22 +55,39 @@ export default function BibleReader() {
         
         // Helper to get verses from either API or offline JSON
         const getVerses = async (lang) => {
-          if (lang === 'hindi_offline') {
-            let data = offlineData;
+          if (lang.endsWith('_offline')) {
+            const fileName = lang === 'hindi_offline' ? 'hindi_offline' : lang.replace('_offline', '');
+            let data = offlineData[lang];
             if (!data) {
-              const res = await fetch('/hindi_offline.json');
+              const res = await fetch(`/${fileName}.json`);
               if (!res.ok) throw new Error('Failed to load offline Bible');
               data = await res.json();
-              setOfflineData(data);
+              setOfflineData(prev => ({ ...prev, [lang]: data }));
             }
-            const chapterData = data[book]?.[chapter];
-            if (!chapterData) throw new Error('Chapter not found in offline data');
-            
-            let fetched = [];
-            for (let v in chapterData) {
-              fetched.push({ verseNum: parseInt(v), text: chapterData[v] });
+
+            // Handle new JSON format (Array of books)
+            if (data.books && Array.isArray(data.books)) {
+              const bookData = data.books.find(b => b.name === book);
+              if (!bookData) throw new Error('Book not found in offline data');
+              const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
+              if (!chapterData) throw new Error('Chapter not found in offline data');
+              
+              return chapterData.verses.map(v => ({ 
+                verseNum: parseInt(v.verse), 
+                text: v.text.replace(/<[^>]*>?/gm, '') 
+              }));
+            } 
+            // Handle original JSON format (Nested objects)
+            else {
+              const chapterData = data[book]?.[chapter];
+              if (!chapterData) throw new Error('Chapter not found in offline data');
+              
+              let fetched = [];
+              for (let v in chapterData) {
+                fetched.push({ verseNum: parseInt(v), text: chapterData[v] });
+              }
+              return fetched;
             }
-            return fetched;
           } else {
             const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${book}%20${chapter}`);
             if (!res.ok) throw new Error('Network error');
@@ -212,6 +229,9 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
+              <option value="AKJV_offline">English: AKJV (OFFLINE)</option>
+              <option value="ASV_offline">English: ASV (OFFLINE)</option>
+              <option value="BBE_offline">English: BBE (OFFLINE)</option>
               <option value="hindi_offline">Hindi (OFFLINE)</option>
               <option value="irv">Hindi (IRV - Online)</option>
               <option value="ta_irv">Tamil</option>
@@ -233,6 +253,9 @@ export default function BibleReader() {
               <option value="web">English: WEB</option>
               <option value="asv">English: ASV</option>
               <option value="net">English: NET</option>
+              <option value="AKJV_offline">English: AKJV (OFFLINE)</option>
+              <option value="ASV_offline">English: ASV (OFFLINE)</option>
+              <option value="BBE_offline">English: BBE (OFFLINE)</option>
               <option value="hindi_offline">Hindi (OFFLINE)</option>
               <option value="irv">Hindi (IRV - Online)</option>
               <option value="ta_irv">Tamil</option>
