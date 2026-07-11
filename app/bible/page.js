@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
-import { Bookmark, Volume2, Loader2, WifiOff, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX } from 'lucide-react';
+import { Bookmark, Volume2, Loader2, WifiOff, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
@@ -173,6 +173,43 @@ export default function BibleReader() {
     }
     fetchChapter();
   }, [book, chapter, primaryLang, secondaryLang, offlineData]);
+
+  // Handle Chapter Navigation
+  const handleNextChapter = () => {
+    if (isPlaying) {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlaying(false);
+    }
+    const bookIndex = ALL_BOOKS.indexOf(book);
+    const maxChapters = CHAPTER_COUNTS[book];
+    if (chapter < maxChapters) {
+      setChapter(chapter + 1);
+    } else if (bookIndex < ALL_BOOKS.length - 1) {
+      setBook(ALL_BOOKS[bookIndex + 1]);
+      setChapter(1);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePrevChapter = () => {
+    if (isPlaying) {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlaying(false);
+    }
+    const bookIndex = ALL_BOOKS.indexOf(book);
+    if (chapter > 1) {
+      setChapter(chapter - 1);
+    } else if (bookIndex > 0) {
+      const prevBook = ALL_BOOKS[bookIndex - 1];
+      setBook(prevBook);
+      setChapter(CHAPTER_COUNTS[prevBook]);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Handle Verse Highlighting
   const toggleHighlight = (verseObj, text, langLabel) => {
@@ -516,6 +553,55 @@ export default function BibleReader() {
               </div>
             </div>
           ))}
+
+          {/* Navigation Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', borderTop: '1px solid var(--border-color)', paddingTop: '24px', gap: '16px' }}>
+            <button 
+              onClick={handlePrevChapter}
+              disabled={book === 'Genesis' && chapter === 1}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                fontWeight: 600,
+                cursor: (book === 'Genesis' && chapter === 1) ? 'not-allowed' : 'pointer',
+                opacity: (book === 'Genesis' && chapter === 1) ? 0.5 : 1,
+                transition: 'all 0.2s',
+                fontSize: '0.95rem'
+              }}
+            >
+              <ArrowLeft size={16} />
+              Prev
+            </button>
+
+            <button 
+              onClick={handleNextChapter}
+              disabled={book === 'Revelation' && chapter === 22}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--accent-blue)',
+                color: 'white',
+                border: 'none',
+                fontWeight: 600,
+                cursor: (book === 'Revelation' && chapter === 22) ? 'not-allowed' : 'pointer',
+                opacity: (book === 'Revelation' && chapter === 22) ? 0.5 : 1,
+                transition: 'all 0.2s',
+                fontSize: '0.95rem'
+              }}
+            >
+              Next
+              <ArrowRight size={16} />
+            </button>
+          </div>
         </div>
       )}
 

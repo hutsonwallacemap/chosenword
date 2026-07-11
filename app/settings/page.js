@@ -36,7 +36,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div style={{ paddingBottom: '100px', animation: 'slideUp 0.4s ease-out forwards', opacity: 1 }}>
+    <div style={{ paddingBottom: '100px', animation: 'pageFadeIn 0.3s ease-out forwards' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '24px', color: 'var(--text-primary)' }}>
         Settings
       </h1>
