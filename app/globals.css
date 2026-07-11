@@ -209,27 +209,20 @@ html.font-xlarge {
 /* Tablet & Desktop Layout Optimization */
 @media (min-width: 768px) {
   body {
-    display: flex;
-    justify-content: center;
     background-color: var(--bg-secondary);
   }
   
   #__next, body > Header, body > main, body > BottomNav, body > nav {
-    max-width: 800px;
     width: 100%;
     margin: 0 auto;
     background-color: var(--bg-primary);
-    box-shadow: 0 0 40px rgba(0,0,0,0.05);
   }
   
   body > main {
-    padding: 32px 40px !important;
+    padding: 32px 64px !important;
   }
   
   nav {
-    max-width: 800px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    border-radius: 20px 20px 0 0;
+    border-radius: 0;
   }
 }

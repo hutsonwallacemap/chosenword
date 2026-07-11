@@ -118,17 +118,26 @@ export default function BibleReader() {
             }
           } else {
             const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${encodeURIComponent(book + ' ' + chapter)}`);
-            if (!res.ok) throw new Error('Network error');
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
-            if (data.results && data.results[0] && data.results[0].verses) {
-              const versesObj = data.results[0].verses[lang][chapter];
-              let fetched = [];
-              for (let v in versesObj) {
-                fetched.push({ verseNum: parseInt(v), text: versesObj[v].text.replace(/<[^>]*>?/gm, '') });
+            
+            if (data.results && data.results.length > 0 && data.results[0].verses) {
+              const versesData = data.results[0].verses;
+              const langKey = Object.keys(versesData)[0]; // usually matches 'lang'
+              if (langKey) {
+                const chapterKey = Object.keys(versesData[langKey])[0]; // usually matches 'chapter'
+                if (chapterKey) {
+                  const versesObj = versesData[langKey][chapterKey];
+                  let fetched = [];
+                  for (let v in versesObj) {
+                    fetched.push({ verseNum: parseInt(v), text: versesObj[v].text.replace(/<[^>]*>?/gm, '') });
+                  }
+                  return fetched;
+                }
               }
-              return fetched;
             }
-            throw new Error('Chapter not found');
+            console.error("API response structure unexpected:", data);
+            throw new Error('Chapter not found or unexpected API response');
           }
         };
 
