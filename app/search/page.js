@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { offlineTranslations } from '../data/translations';
+import { ArrowLeft, Search, Loader2 } from 'lucide-react';
 
 export default function SearchPage() {
   const router = useRouter();
