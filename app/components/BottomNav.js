@@ -9,6 +9,7 @@ export default function BottomNav() {
     { name: 'Home', path: '/', icon: 'home' },
     { name: 'Bible', path: '/bible', icon: 'menu_book' },
     { name: 'Saved', path: '/saved', icon: 'bookmark' },
+    { name: 'Settings', path: '/settings', icon: 'settings' },
   ];
 
   return (

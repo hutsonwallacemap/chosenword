@@ -17,6 +17,20 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            try {
+              const theme = localStorage.getItem('cw_theme');
+              if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+              }
+              const fontSize = localStorage.getItem('cw_font_size');
+              if (fontSize) {
+                document.documentElement.classList.add('font-' + fontSize);
+              }
+            } catch (e) {}
+          `
+        }} />
       </head>
       <body>
         <Header />

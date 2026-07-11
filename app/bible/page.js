@@ -636,9 +636,58 @@ export default function BibleReader() {
         </div>
       )}
 
+      {/* Audio Mini Player */}
+      {isPlaying && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '90%',
+          maxWidth: '400px',
+          background: 'var(--bg-card)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--border-color)',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 1000,
+          animation: 'slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              width: '40px', height: '40px', borderRadius: '50%', 
+              background: 'var(--accent-blue-light)', display: 'flex', 
+              alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' 
+            }}>
+              <span className="material-symbols-rounded" style={{ fontVariationSettings: "'FILL' 1" }}>volume_up</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Now Playing</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{book} {chapter} ({primaryLang})</div>
+            </div>
+          </div>
+          
+          <button 
+            onClick={handlePlayAudio}
+            style={{ 
+              background: 'var(--bg-secondary)', 
+              color: 'var(--text-primary)', 
+              width: '40px', height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            }}
+          >
+            <span className="material-symbols-rounded">stop</span>
+          </button>
+        </div>
+      )}
+
       <style jsx global>{`
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
       `}</style>
     </div>
   );
