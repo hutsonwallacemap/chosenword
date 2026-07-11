@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Share2, Trash2, Bookmark } from 'lucide-react';
 
 export default function SavedItems() {
   const [activeTab, setActiveTab] = useState('verses'); // 'verses' or 'chapters'
@@ -97,11 +98,11 @@ export default function SavedItems() {
                   <p style={{ color: 'var(--text-primary)', fontSize: '1.1rem', marginBottom: '20px', lineHeight: 1.5 }}>"{v.text}"</p>
                   
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => shareVerse(v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)', fontWeight: 600, padding: '8px 12px', backgroundColor: 'var(--accent-blue-light)', borderRadius: 'var(--radius-sm)' }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>share</span> Share
+                    <button onClick={() => shareVerse(v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)', fontWeight: 600, padding: '8px 12px', backgroundColor: 'var(--accent-blue-light)', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer' }}>
+                      <Share2 size={16} /> Share
                     </button>
-                    <button onClick={() => removeVerse(v.ref, v.text)} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: 600, padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: 'var(--radius-sm)' }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>delete</span>
+                    <button onClick={() => removeVerse(v.ref, v.text)} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: 600, padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer' }}>
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -120,14 +121,14 @@ export default function SavedItems() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {bookmarkedChapters.map((b, i) => (
                 <div key={i} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', color: 'var(--accent-blue)', fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+                  <Bookmark size={36} style={{ color: 'var(--accent-blue)', fill: 'var(--accent-blue)', fillOpacity: 0.2 }} />
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0, textAlign: 'center' }}>{b.ref}</h3>
                   <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                     <Link href="/bible" style={{ flex: 1, textAlign: 'center', padding: '8px', backgroundColor: 'var(--accent-blue)', color: '#fff', borderRadius: 'var(--radius-sm)', fontWeight: 600, textDecoration: 'none' }}>
                       Read
                     </Link>
-                    <button onClick={() => removeBookmark(b.ref)} style={{ padding: '8px 12px', backgroundColor: '#fef2f2', color: '#ef4444', borderRadius: 'var(--radius-sm)' }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: '1.2rem' }}>delete</span>
+                    <button onClick={() => removeBookmark(b.ref)} style={{ padding: '8px 12px', backgroundColor: '#fef2f2', color: '#ef4444', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer' }}>
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>

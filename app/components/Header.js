@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { BookOpen, Sun, Moon } from 'lucide-react';
 
 export default function Header() {
   const [isDark, setIsDark] = useState(false);
@@ -36,12 +37,10 @@ export default function Header() {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ 
-          background: 'var(--accent-gold-grad)', 
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
+          color: '#d97706', // gold
           display: 'flex'
         }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>menu_book</span>
+          <BookOpen size={32} strokeWidth={2.5} />
         </div>
         <h1 style={{ 
           fontSize: '1.6rem', 
@@ -62,11 +61,11 @@ export default function Header() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)',
+        border: 'none',
+        cursor: 'pointer'
       }}>
-        <span className="material-symbols-rounded" style={{ fontSize: '1.5rem' }}>
-          {isDark ? 'light_mode' : 'dark_mode'}
-        </span>
+        {isDark ? <Sun size={20} /> : <Moon size={20} />}
       </button>
     </header>
   );

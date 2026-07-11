@@ -1,15 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home, BookOpen, Bookmark, Settings } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Home', path: '/', icon: 'home' },
-    { name: 'Bible', path: '/bible', icon: 'menu_book' },
-    { name: 'Saved', path: '/saved', icon: 'bookmark' },
-    { name: 'Settings', path: '/settings', icon: 'settings' },
+    { name: 'Home', path: '/', Icon: Home },
+    { name: 'Bible', path: '/bible', Icon: BookOpen },
+    { name: 'Saved', path: '/saved', Icon: Bookmark },
+    { name: 'Settings', path: '/settings', Icon: Settings },
   ];
 
   return (
@@ -25,6 +26,7 @@ export default function BottomNav() {
     }}>
       {navItems.map((item) => {
         const isActive = pathname === item.path;
+        const IconComponent = item.Icon;
         return (
           <Link href={item.path} key={item.name} style={{
             display: 'flex',
@@ -38,13 +40,15 @@ export default function BottomNav() {
             transition: 'all 0.3s ease',
             transform: isActive ? 'translateY(-2px)' : 'translateY(0)'
           }}>
-            <span className="material-symbols-rounded" style={{ 
-              fontSize: isActive ? '2rem' : '1.8rem',
-              fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-              transition: 'all 0.3s ease'
-            }}>
-              {item.icon}
-            </span>
+            <IconComponent 
+              size={24} 
+              strokeWidth={isActive ? 2.5 : 2} 
+              style={{
+                fill: isActive ? 'var(--accent-blue)' : 'transparent',
+                fillOpacity: 0.15,
+                transition: 'all 0.3s ease'
+              }}
+            />
           </Link>
         );
       })}

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { nt30Plan, plan180, plan365 } from '../data/readingPlans';
+import { ArrowLeft, Library, Check } from 'lucide-react';
 
 export default function PlansPage() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function PlansPage() {
           onClick={() => router.back()} 
           style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '50%', backgroundColor: 'var(--bg-secondary)' }}
         >
-          <span className="material-symbols-rounded">arrow_back</span>
+          <ArrowLeft size={20} />
         </button>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Reading Plans</h1>
       </div>
@@ -88,7 +89,7 @@ export default function PlansPage() {
             <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>{activePlan.desc}</span>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '4px 0', color: 'var(--text-primary)' }}>{activePlan.name} Plan</h2>
           </div>
-          <span className="material-symbols-rounded" style={{ fontSize: '2.5rem', color: 'var(--accent-blue)' }}>library_books</span>
+          <Library size={36} style={{ color: 'var(--accent-blue)' }} />
         </div>
         
         <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
@@ -148,7 +149,7 @@ export default function PlansPage() {
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              {activeProgress[p.day] && <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'white', fontVariationSettings: "'FILL' 1" }}>check</span>}
+              {activeProgress[p.day] && <Check size={14} style={{ color: 'white' }} />}
             </div>
           </div>
         ))}

@@ -118,7 +118,7 @@ export default function SearchPage() {
           onClick={() => router.back()} 
           style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '50%', backgroundColor: 'var(--bg-secondary)' }}
         >
-          <span className="material-symbols-rounded">arrow_back</span>
+          <ArrowLeft size={20} />
         </button>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Global Search</h1>
       </div>
@@ -128,7 +128,7 @@ export default function SearchPage() {
           <div>
             <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Search Keyword</label>
             <div style={{ position: 'relative' }}>
-              <span className="material-symbols-rounded" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>search</span>
+              <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               <input 
                 type="text" 
                 value={query}
@@ -174,7 +174,7 @@ export default function SearchPage() {
               gap: '8px'
             }}
           >
-            {loading ? <span className="material-symbols-rounded" style={{ animation: 'spin 2s linear infinite' }}>autorenew</span> : <span className="material-symbols-rounded">search</span>}
+            {loading ? <Loader2 size={20} className="spin" /> : <Search size={20} />}
             {loading ? 'Searching...' : 'Search Bible'}
           </button>
         </form>
@@ -194,7 +194,7 @@ export default function SearchPage() {
           
           {results.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: '3rem', marginBottom: '16px', opacity: 0.5 }}>search_off</span>
+              <Search size={48} style={{ marginBottom: '16px', opacity: 0.5, margin: '0 auto' }} />
               <p style={{ fontSize: '1.1rem' }}>No verses found containing "{query}"</p>
             </div>
           ) : (

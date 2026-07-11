@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
+import { Bookmark, Volume2, Loader2, WifiOff, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX } from 'lucide-react';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
@@ -375,7 +376,7 @@ export default function BibleReader() {
               transition: 'all 0.2s ease'
             }}
           >
-            <span className="material-symbols-rounded" style={{ fontVariationSettings: isChapterBookmarked() ? "'FILL' 1" : "'FILL' 0" }}>bookmark</span>
+            <Bookmark size={20} style={{ fill: isChapterBookmarked() ? 'var(--accent-gold)' : 'transparent' }} />
           </button>
           
           {/* Audio Play Button */}
@@ -396,9 +397,7 @@ export default function BibleReader() {
               transition: 'all 0.2s ease'
             }}
           >
-            <span className="material-symbols-rounded" style={{ fontVariationSettings: isPlaying ? "'FILL' 1" : "'FILL' 0" }}>
-              {isPlaying ? 'stop_circle' : 'volume_up'}
-            </span>
+            {isPlaying ? <VolumeX size={20} /> : <Volume2 size={20} />}
           </button>
         </div>
 
@@ -461,14 +460,14 @@ export default function BibleReader() {
 
       {loading && (
         <div className="placeholder-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', color: 'var(--accent-gold)', animation: 'spin 2s linear infinite' }}>autorenew</span>
+          <Loader2 size={36} className="spin" style={{ color: 'var(--accent-gold)' }} />
           Fetching verses...
         </div>
       )}
       
       {error && (
         <div className="card" style={{ textAlign: 'center', color: '#ef4444', borderColor: '#fca5a5', backgroundColor: '#fef2f2' }}>
-          <span className="material-symbols-rounded" style={{ fontSize: '3rem', marginBottom: '8px' }}>wifi_off</span>
+          <WifiOff size={48} style={{ marginBottom: '8px', margin: '0 auto' }} />
           <p>{error}</p>
         </div>
       )}
@@ -495,7 +494,7 @@ export default function BibleReader() {
                   {v.primaryText}
                 </p>
                 {verseNotes[`${book} ${chapter}:${v.verseNum}`] && (
-                  <span className="material-symbols-rounded" style={{ fontSize: '1rem', color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px' }}>sticky_note_2</span>
+                  <FileText size={16} style={{ color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px', display: 'inline-block' }} />
                 )}
 
                 {/* Secondary Verse (Dual Mode) */}
@@ -543,7 +542,7 @@ export default function BibleReader() {
               onClick={() => { toggleHighlight(selectedVerse.verseObj, selectedVerse.text, selectedVerse.langLabel); setSelectedVerse(null); }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? 'var(--accent-gold)' : 'var(--text-primary)' }}
             >
-              <span className="material-symbols-rounded" style={{ fontVariationSettings: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? "'FILL' 1" : "'FILL' 0" }}>format_ink_highlighter</span>
+              <Highlighter size={20} style={{ fill: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? 'var(--accent-gold)' : 'transparent' }} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Highlight</span>
             </button>
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
@@ -551,7 +550,7 @@ export default function BibleReader() {
               onClick={handleCopy}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
             >
-              <span className="material-symbols-rounded">content_copy</span>
+              <Copy size={20} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Copy</span>
             </button>
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
@@ -562,7 +561,7 @@ export default function BibleReader() {
               }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
             >
-              <span className="material-symbols-rounded">edit_note</span>
+              <Edit3 size={20} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Note</span>
             </button>
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
@@ -570,7 +569,7 @@ export default function BibleReader() {
               onClick={handleShare}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
             >
-              <span className="material-symbols-rounded">share</span>
+              <Share2 size={20} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
             </button>
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
@@ -578,7 +577,7 @@ export default function BibleReader() {
               onClick={handleCompare}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
             >
-              <span className="material-symbols-rounded">difference</span>
+              <BookOpen size={20} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
             </button>
           </div>
@@ -593,16 +592,16 @@ export default function BibleReader() {
               <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Verse Comparison</h3>
               <button 
                 onClick={() => setCompareModal({ isOpen: false, loading: false, data: [] })}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
               >
-                <span className="material-symbols-rounded">close</span>
+                <X size={20} />
               </button>
             </div>
             
             <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {compareModal.loading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px 0' }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: '2rem', animation: 'spin 2s linear infinite', color: 'var(--accent-blue)' }}>autorenew</span>
+                  <Loader2 size={24} className="spin" style={{ color: 'var(--accent-blue)' }} />
                   <p style={{ color: 'var(--text-secondary)' }}>Loading translations...</p>
                 </div>
               ) : compareModal.data.length > 0 ? (
@@ -676,7 +675,7 @@ export default function BibleReader() {
               background: 'var(--accent-blue-light)', display: 'flex', 
               alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' 
             }}>
-              <span className="material-symbols-rounded" style={{ fontVariationSettings: "'FILL' 1" }}>volume_up</span>
+              <Volume2 size={20} />
             </div>
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Now Playing</div>
@@ -691,10 +690,11 @@ export default function BibleReader() {
               color: 'var(--text-primary)', 
               width: '40px', height: '40px', 
               borderRadius: '50%', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 'none', cursor: 'pointer'
             }}
           >
-            <span className="material-symbols-rounded">stop</span>
+            <VolumeX size={20} />
           </button>
         </div>
       )}

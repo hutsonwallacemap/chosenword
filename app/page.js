@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { dailyVerses, dailyQuizzes } from './data/dailyContent';
+import { Flame, Trophy, BookOpen, Search, Library, Bookmark, HelpCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 // Seeded random number generator
 function mulberry32(a) {
@@ -113,7 +114,7 @@ export default function Home() {
         border: '1px solid var(--border-color)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="material-symbols-rounded" style={{ color: '#f97316', fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+          <Flame size={24} style={{ color: '#f97316', fill: '#f97316' }} />
           <div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Current Streak</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.current} Day{streaks.current !== 1 ? 's' : ''}</p>
@@ -121,7 +122,7 @@ export default function Home() {
         </div>
         <div style={{ height: '30px', width: '1px', background: 'var(--border-color)' }}></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="material-symbols-rounded" style={{ color: '#eab308', fontVariationSettings: "'FILL' 1" }}>military_tech</span>
+          <Trophy size={24} style={{ color: '#eab308', fill: '#eab308' }} />
           <div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Streak</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.longest} Day{streaks.longest !== 1 ? 's' : ''}</p>
@@ -181,7 +182,7 @@ export default function Home() {
             display: 'flex',
             color: 'var(--accent-blue)'
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>auto_stories</span>
+            <BookOpen size={28} />
           </div>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Read Bible</h3>
         </Link>
@@ -201,11 +202,11 @@ export default function Home() {
             display: 'flex',
             color: '#4f46e5' // indigo-600
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>search</span>
+            <Search size={28} />
           </div>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Search</h3>
         </Link>
-
+ 
         <Link href="/plans" className="card" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -221,11 +222,11 @@ export default function Home() {
             display: 'flex',
             color: '#db2777' // pink-600
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>library_books</span>
+            <Library size={28} />
           </div>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Plans</h3>
         </Link>
-
+ 
         <Link href="/saved" className="card" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -241,7 +242,7 @@ export default function Home() {
             display: 'flex',
             color: 'var(--accent-gold)'
           }}>
-            <span className="material-symbols-rounded" style={{ fontSize: '2rem' }}>bookmark</span>
+            <Bookmark size={28} />
           </div>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Saved</h3>
         </Link>
@@ -250,7 +251,7 @@ export default function Home() {
       {/* Daily Quiz Section */}
       <div style={{ marginTop: '16px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '16px', paddingLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="material-symbols-rounded">quiz</span> Daily Quiz
+          <HelpCircle size={20} /> Daily Quiz
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -281,18 +282,18 @@ export default function Home() {
                     };
                     
                     let icon = null;
-
+ 
                     if (answered) {
                       if (optIndex === quiz.answer) {
                         btnStyle.backgroundColor = '#dcfce7'; // green-100
                         btnStyle.borderColor = '#22c55e'; // green-500
                         btnStyle.color = '#166534'; // green-800
-                        icon = <span className="material-symbols-rounded" style={{ color: '#22c55e' }}>check_circle</span>;
+                        icon = <CheckCircle2 size={18} style={{ color: '#22c55e' }} />;
                       } else if (optIndex === selected) {
                         btnStyle.backgroundColor = '#fee2e2'; // red-100
                         btnStyle.borderColor = '#ef4444'; // red-500
                         btnStyle.color = '#991b1b'; // red-800
-                        icon = <span className="material-symbols-rounded" style={{ color: '#ef4444' }}>cancel</span>;
+                        icon = <XCircle size={18} style={{ color: '#ef4444' }} />;
                       }
                     }
 
