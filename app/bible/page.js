@@ -117,7 +117,7 @@ export default function BibleReader() {
               return fetched;
             }
           } else {
-            const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${encodeURIComponent(book + ' ' + chapter)}`);
+            const res = await fetch(`/api/bible?bible=${lang}&reference=${encodeURIComponent(book + ' ' + chapter)}`);
             if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             
@@ -137,7 +137,7 @@ export default function BibleReader() {
               }
             }
             console.error("API response structure unexpected:", data);
-            throw new Error('Chapter not found or unexpected API response');
+            throw new Error('Unexpected API response');
           }
         };
 
@@ -163,7 +163,8 @@ export default function BibleReader() {
         
         setVerses(primaryVerses);
       } catch (err) {
-        setError('Failed to load chapter. Please check your internet connection.');
+        console.error("Fetch Error:", err);
+        setError(`Failed: ${err.message}`);
         setVerses([]);
       } finally {
         setLoading(false);

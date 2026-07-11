@@ -39,13 +39,12 @@ export default function BottomNav() {
             transform: isActive ? 'translateY(-2px)' : 'translateY(0)'
           }}>
             <span className="material-symbols-rounded" style={{ 
-              fontSize: isActive ? '1.8rem' : '1.6rem',
+              fontSize: isActive ? '2rem' : '1.8rem',
               fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
               transition: 'all 0.3s ease'
             }}>
               {item.icon}
             </span>
-            <span>{item.name}</span>
           </Link>
         );
       })}
