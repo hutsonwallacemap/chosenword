@@ -4,12 +4,12 @@ export const offlineTranslations = [
   { id: 'BBE_offline', name: 'English: BBE', filename: 'BBE' },
   { id: 'hindi_offline', name: 'Hindi', filename: 'hindi_offline' },
   { id: 'ta_offline', name: 'Tamil', filename: 'ta_offline' },
-  { id: 'asvs', name: 'ASVS', filename: 'asvs' },
-  { id: 'bishops', name: 'Bishops', filename: 'bishops' },
-  { id: 'geneva', name: 'Geneva', filename: 'geneva' },
-  { id: 'kjv_strongs', name: 'KJV (Strongs)', filename: 'kjv_strongs' },
-  { id: 'net', name: 'NET', filename: 'net' },
-  { id: 'web', name: 'WEB', filename: 'web' }
+  { id: 'asvs_offline', name: 'ASVS', filename: 'asvs' },
+  { id: 'bishops_offline', name: 'Bishops', filename: 'bishops' },
+  { id: 'geneva_offline', name: 'Geneva', filename: 'geneva' },
+  { id: 'kjv_strongs_offline', name: 'KJV (Strongs)', filename: 'kjv_strongs' },
+  { id: 'net_offline', name: 'NET', filename: 'net' },
+  { id: 'web_offline', name: 'WEB', filename: 'web' }
   // To add a new translation:
   // 1. Upload your JSON file to the public/ folder (e.g. telugu.json)
   // 2. Add a new line here: { id: 'telugu_offline', name: 'Telugu', filename: 'telugu' }

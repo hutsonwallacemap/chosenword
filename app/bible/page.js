@@ -117,7 +117,7 @@ export default function BibleReader() {
               return fetched;
             }
           } else {
-            const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${book}%20${chapter}`);
+            const res = await fetch(`https://api.biblesupersearch.com/api?bible=${lang}&reference=${encodeURIComponent(book + ' ' + chapter)}`);
             if (!res.ok) throw new Error('Network error');
             const data = await res.json();
             if (data.results && data.results[0] && data.results[0].verses) {
@@ -329,12 +329,12 @@ export default function BibleReader() {
       <div className="card" style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         
         {/* Book & Chapter Row */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <select 
             className="custom-select"
             value={book} 
             onChange={(e) => { setBook(e.target.value); setChapter(1); }}
-            style={{ flex: 2 }}
+            style={{ flex: '1 1 auto', minWidth: '120px', height: '44px' }}
           >
             {ALL_BOOKS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
@@ -343,7 +343,7 @@ export default function BibleReader() {
             className="custom-select"
             value={chapter} 
             onChange={(e) => setChapter(e.target.value)}
-            style={{ flex: 1 }}
+            style={{ flex: '0 1 auto', width: '90px', height: '44px' }}
           >
             {[...Array(CHAPTER_COUNTS[book] || 1)].map((_, i) => <option key={i+1} value={i+1}>Ch {i+1}</option>)}
           </select>
@@ -355,7 +355,9 @@ export default function BibleReader() {
               backgroundColor: isChapterBookmarked() ? 'var(--accent-gold-light)' : 'var(--bg-secondary)',
               color: isChapterBookmarked() ? 'var(--accent-gold)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
-              padding: '0 12px',
+              width: '44px',
+              height: '44px',
+              flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -373,7 +375,9 @@ export default function BibleReader() {
               backgroundColor: isPlaying ? 'var(--accent-blue)' : 'var(--bg-secondary)',
               color: isPlaying ? 'white' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
-              padding: '0 12px',
+              width: '44px',
+              height: '44px',
+              flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -389,8 +393,8 @@ export default function BibleReader() {
         </div>
 
         {/* Translation Row */}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 calc(50% - 6px)', minWidth: '130px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Primary</label>
             <select 
               className="custom-select"
@@ -398,25 +402,25 @@ export default function BibleReader() {
               onChange={(e) => setPrimaryLang(e.target.value)}
               style={{ width: '100%' }}
             >
-              <option value="kjv">English: KJV</option>
-              <option value="web">English: WEB</option>
-              <option value="asv">English: ASV</option>
-              <option value="net">English: NET</option>
+              <optgroup label="Online">
+                <option value="kjv">English: KJV</option>
+                <option value="web">English: WEB</option>
+                <option value="asv">English: ASV</option>
+                <option value="net">English: NET</option>
+                <option value="irv">Hindi (IRV)</option>
+                <option value="ta_irv">Tamil</option>
+                <option value="te_irv">Telugu</option>
+                <option value="bn_irv">Bengali</option>
+              </optgroup>
               <optgroup label="Offline">
                 {offlineTranslations.map(t => (
                   <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
                 ))}
               </optgroup>
-              <optgroup label="Online">
-                <option value="irv">Hindi (IRV - Online)</option>
-                <option value="ta_irv">Tamil (Online)</option>
-                <option value="te_irv">Telugu</option>
-                <option value="bn_irv">Bengali</option>
-              </optgroup>
             </select>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ flex: '1 1 calc(50% - 6px)', minWidth: '130px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Secondary</label>
             <select 
               className="custom-select"
@@ -425,20 +429,20 @@ export default function BibleReader() {
               style={{ width: '100%' }}
             >
               <option value="none">None</option>
-              <option value="kjv">English: KJV</option>
-              <option value="web">English: WEB</option>
-              <option value="asv">English: ASV</option>
-              <option value="net">English: NET</option>
+              <optgroup label="Online">
+                <option value="kjv">English: KJV</option>
+                <option value="web">English: WEB</option>
+                <option value="asv">English: ASV</option>
+                <option value="net">English: NET</option>
+                <option value="irv">Hindi (IRV)</option>
+                <option value="ta_irv">Tamil</option>
+                <option value="te_irv">Telugu</option>
+                <option value="bn_irv">Bengali</option>
+              </optgroup>
               <optgroup label="Offline">
                 {offlineTranslations.map(t => (
                   <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
                 ))}
-              </optgroup>
-              <optgroup label="Online">
-                <option value="irv">Hindi (IRV - Online)</option>
-                <option value="ta_irv">Tamil (Online)</option>
-                <option value="te_irv">Telugu</option>
-                <option value="bn_irv">Bengali</option>
               </optgroup>
             </select>
           </div>
