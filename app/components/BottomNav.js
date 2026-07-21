@@ -20,9 +20,10 @@ export default function BottomNav() {
       width: '100%',
       display: 'flex',
       justifyContent: 'space-around',
-      padding: '16px 0',
+      padding: '12px 0 20px', // extra padding bottom for iOS safe area
       boxShadow: '0 -4px 20px rgba(0,0,0,0.05)',
-      zIndex: 100
+      zIndex: 100,
+      borderTop: '1px solid var(--border-color)'
     }}>
       {navItems.map((item) => {
         const isActive = pathname === item.path;
@@ -34,21 +35,35 @@ export default function BottomNav() {
             alignItems: 'center',
             color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
             textDecoration: 'none',
-            fontSize: '0.8rem',
-            fontWeight: isActive ? 700 : 500,
-            gap: '6px',
-            transition: 'all 0.3s ease',
-            transform: isActive ? 'translateY(-2px)' : 'translateY(0)'
+            fontSize: '0.75rem',
+            fontWeight: isActive ? 600 : 500,
+            gap: '4px',
+            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            minWidth: '64px',
           }}>
-            <IconComponent 
-              size={24} 
-              strokeWidth={isActive ? 2.5 : 2} 
-              style={{
-                fill: isActive ? 'var(--accent-blue)' : 'transparent',
-                fillOpacity: 0.15,
-                transition: 'all 0.3s ease'
-              }}
-            />
+            <div style={{
+              padding: '6px 16px',
+              borderRadius: '20px',
+              backgroundColor: isActive ? 'var(--accent-blue-light)' : 'transparent',
+              transition: 'background-color 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '2px'
+            }}>
+              <IconComponent 
+                size={22} 
+                strokeWidth={isActive ? 2.5 : 2} 
+                style={{
+                  color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  transition: 'color 0.3s ease'
+                }}
+              />
+            </div>
+            <span style={{ 
+              opacity: isActive ? 1 : 0.8,
+              transition: 'opacity 0.3s ease'
+            }}>{item.name}</span>
           </Link>
         );
       })}

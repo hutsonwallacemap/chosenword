@@ -510,52 +510,55 @@ export default function BibleReader() {
       )}
       
       {!loading && !error && (
-        <div className="card" style={{ padding: '32px 24px', backgroundColor: 'var(--bg-primary)' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, textAlign: 'center', marginBottom: '32px', color: 'var(--text-primary)' }}>
+        <div className="card" style={{ padding: '40px 24px', backgroundColor: 'var(--bg-primary)', border: 'none', boxShadow: 'none' }}>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '40px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
             {book} {chapter}
           </h2>
           
-          {verses.map(v => (
-            <div key={v.verseNum} style={{ marginBottom: '24px', position: 'relative' }}>
-              <div style={{ position: 'absolute', left: '-10px', top: '4px', fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: 800 }}>
-                {v.verseNum}
-              </div>
-              
-              <div style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Primary Verse */}
-                <p 
-                  className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.primaryText ? 'selected-verse' : ''}`}
-                  onClick={() => setSelectedVerse({ verseObj: v, text: v.primaryText, langLabel: primaryLang })}
-                  style={{ fontSize: '1.2rem', margin: 0, cursor: 'pointer', lineHeight: 1.5, display: 'inline' }}
-                >
-                  {v.primaryText}
-                </p>
-                {verseNotes[`${book} ${chapter}:${v.verseNum}`] && (
-                  <FileText size={16} style={{ color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px', display: 'inline-block' }} />
-                )}
-
-                {/* Secondary Verse (Dual Mode) */}
-                {secondaryLang !== 'none' && v.secondaryText && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {verses.map(v => (
+              <div key={v.verseNum} style={{ position: 'relative', paddingLeft: '24px' }}>
+                <div style={{ position: 'absolute', left: '0', top: '6px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 600, userSelect: 'none' }}>
+                  {v.verseNum}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Primary Verse */}
                   <p 
-                    className={`verse-item ${isHighlighted(v.verseNum, v.secondaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.secondaryText ? 'selected-verse' : ''}`}
-                    onClick={() => setSelectedVerse({ verseObj: v, text: v.secondaryText, langLabel: secondaryLang })}
-                    style={{ 
-                      fontSize: '1.1rem', 
-                      margin: 0, 
-                      cursor: 'pointer', 
-                      lineHeight: 1.5,
-                      color: 'var(--text-secondary)'
-                    }}
+                    className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.primaryText ? 'selected-verse' : ''}`}
+                    onClick={() => setSelectedVerse({ verseObj: v, text: v.primaryText, langLabel: primaryLang })}
+                    style={{ fontSize: '1.25rem', margin: 0, cursor: 'pointer', lineHeight: 1.6, display: 'inline', color: 'var(--text-primary)' }}
                   >
-                    {v.secondaryText}
+                    {v.primaryText}
                   </p>
-                )}
+                  {verseNotes[`${book} ${chapter}:${v.verseNum}`] && (
+                    <FileText size={16} style={{ color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px', display: 'inline-block', opacity: 0.8 }} />
+                  )}
+
+                  {/* Secondary Verse (Dual Mode) */}
+                  {secondaryLang !== 'none' && v.secondaryText && (
+                    <p 
+                      className={`verse-item ${isHighlighted(v.verseNum, v.secondaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.secondaryText ? 'selected-verse' : ''}`}
+                      onClick={() => setSelectedVerse({ verseObj: v, text: v.secondaryText, langLabel: secondaryLang })}
+                      style={{ 
+                        fontSize: '1.15rem', 
+                        margin: 0, 
+                        cursor: 'pointer', 
+                        lineHeight: 1.6,
+                        color: 'var(--text-secondary)',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      {v.secondaryText}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* Navigation Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', borderTop: '1px solid var(--border-color)', paddingTop: '24px', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px', paddingTop: '32px', gap: '16px', borderTop: '1px solid var(--border-color)' }}>
             <button 
               onClick={handlePrevChapter}
               disabled={book === 'Genesis' && chapter === 1}
@@ -563,19 +566,19 @@ export default function BibleReader() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '12px 18px',
-                borderRadius: 'var(--radius-sm)',
+                padding: '14px 20px',
+                borderRadius: 'var(--radius-lg)',
                 backgroundColor: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 border: '1px solid var(--border-color)',
                 fontWeight: 600,
                 cursor: (book === 'Genesis' && chapter === 1) ? 'not-allowed' : 'pointer',
-                opacity: (book === 'Genesis' && chapter === 1) ? 0.5 : 1,
+                opacity: (book === 'Genesis' && chapter === 1) ? 0.4 : 1,
                 transition: 'all 0.2s',
                 fontSize: '0.95rem'
               }}
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={18} />
               Prev
             </button>
 
@@ -586,20 +589,21 @@ export default function BibleReader() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '12px 18px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--accent-blue)',
+                padding: '14px 24px',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--accent-blue-grad)',
                 color: 'white',
                 border: 'none',
                 fontWeight: 600,
                 cursor: (book === 'Revelation' && chapter === 22) ? 'not-allowed' : 'pointer',
-                opacity: (book === 'Revelation' && chapter === 22) ? 0.5 : 1,
+                opacity: (book === 'Revelation' && chapter === 22) ? 0.4 : 1,
                 transition: 'all 0.2s',
-                fontSize: '0.95rem'
+                fontSize: '0.95rem',
+                boxShadow: 'var(--shadow-md)'
               }}
             >
               Next
-              <ArrowRight size={16} />
+              <ArrowRight size={18} />
             </button>
           </div>
         </div>

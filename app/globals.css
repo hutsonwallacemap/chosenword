@@ -1,59 +1,70 @@
 :root {
+  /* Core Colors */
   --bg-primary: #ffffff;
-  --bg-secondary: #f4f7fe;
+  --bg-secondary: #f8fafc;
   --bg-card: #ffffff;
   
-  --text-primary: #1e293b;
+  /* Text Colors */
+  --text-primary: #0f172a;
   --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
   
+  /* Accent Colors */
   --accent-gold: #f59e0b;
   --accent-gold-light: #fef3c7;
   --accent-gold-grad: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
   
   --accent-blue: #3b82f6;
   --accent-blue-light: #eff6ff;
-  --accent-blue-grad: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+  --accent-blue-grad: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   
   --accent-purple: #8b5cf6;
   --accent-purple-light: #f5f3ff;
-  --accent-purple-grad: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  --accent-purple-grad: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   
+  /* UI Elements */
   --border-color: #e2e8f0;
   
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
-  --shadow-md: 0 10px 25px rgba(0,0,0,0.1);
-  --shadow-lg: 0 20px 40px rgba(0,0,0,0.15);
+  /* Elevation & Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   
-  --radius-lg: 24px;
-  --radius-md: 16px;
+  /* Border Radius */
+  --radius-lg: 16px;
+  --radius-md: 12px;
   --radius-sm: 8px;
   
+  /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.4);
 }
 
 .dark-theme {
-  --bg-primary: #0b0f19;
-  --bg-secondary: #111827;
-  --bg-card: #1f2937;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
   
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
   
   --accent-gold: #fbbf24;
   --accent-gold-light: rgba(245, 158, 11, 0.15);
+  --accent-gold-grad: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   
   --accent-blue: #60a5fa;
   --accent-blue-light: rgba(59, 130, 246, 0.15);
+  --accent-blue-grad: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   
   --accent-purple: #a78bfa;
   --accent-purple-light: rgba(139, 92, 246, 0.15);
   
-  --border-color: #374151;
+  --border-color: #334155;
   
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
-  --shadow-md: 0 10px 25px rgba(0,0,0,0.3);
-  --shadow-lg: 0 20px 40px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
   
   --glass-bg: rgba(15, 23, 42, 0.85);
   --glass-border: rgba(255, 255, 255, 0.1);
@@ -67,7 +78,7 @@
 }
 
 body {
-  font-family: 'Outfit', -apple-system, sans-serif;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -85,11 +96,11 @@ button {
   background: none;
   font-family: inherit;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s, box-shadow 0.2s;
 }
 
 button:active {
-  transform: scale(0.95);
+  transform: scale(0.97);
 }
 
 .placeholder-text {
@@ -109,26 +120,28 @@ button:active {
 
 .card {
   background: var(--bg-card);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   padding: 24px;
   border: 1px solid var(--border-color);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
 .verse-item {
-  transition: all 0.3s ease;
-  padding: 8px;
+  transition: all 0.2s ease-in-out;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
+  margin-bottom: 4px;
 }
 
 .verse-item:active {
   background-color: var(--accent-gold-light);
+  transform: scale(0.99);
 }
 
 .highlighted {
@@ -141,7 +154,7 @@ button:active {
 }
 
 .custom-select {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background-color: var(--bg-primary);
@@ -150,20 +163,32 @@ button:active {
   font-size: 0.95rem;
   font-weight: 500;
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px top 50%;
+  background-position: right 14px top 50%;
   background-size: 10px auto;
-  padding-right: 32px;
+  padding-right: 36px;
 }
 
 .custom-select:focus {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px var(--accent-blue-light);
+}
+
+.quiz-btn {
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.2s ease;
+  width: 100%;
 }
 
 .quiz-btn:hover {
@@ -175,7 +200,7 @@ button:active {
   background-color: var(--bg-secondary);
   border-left: 3px solid var(--accent-gold);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  padding: 8px 12px;
+  padding: 10px 14px;
   margin-left: -15px;
   margin-right: -12px;
   transition: all 0.2s ease;
@@ -205,7 +230,7 @@ button:active {
 
 /* Global Font Size Adjustments */
 html {
-  font-size: 16px; /* default */
+  font-size: 16px;
 }
 html.font-small {
   font-size: 14px;

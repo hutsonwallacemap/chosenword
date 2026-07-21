@@ -104,148 +104,165 @@ export default function Home() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* Streaks Banner */}
-      <div style={{ 
+      <div className="card" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        background: 'var(--bg-secondary)',
-        padding: '12px 20px',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-color)'
+        padding: '16px 20px',
+        borderLeft: '4px solid #f97316'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Flame size={24} style={{ color: '#f97316', fill: '#f97316' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ 
+            background: 'linear-gradient(135deg, #ffedd5 0%, #ffc82c 100%)', 
+            padding: '10px', 
+            borderRadius: '12px',
+            boxShadow: '0 2px 10px rgba(249, 115, 22, 0.2)'
+          }}>
+            <Flame size={24} style={{ color: '#ea580c', fill: '#ea580c' }} />
+          </div>
           <div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Current Streak</p>
-            <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.current} Day{streaks.current !== 1 ? 's' : ''}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Current Streak</p>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{streaks.current} Day{streaks.current !== 1 ? 's' : ''}</p>
           </div>
         </div>
-        <div style={{ height: '30px', width: '1px', background: 'var(--border-color)' }}></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Trophy size={24} style={{ color: '#eab308', fill: '#eab308' }} />
+        <div style={{ height: '40px', width: '1px', background: 'var(--border-color)' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ 
+            background: 'linear-gradient(135deg, #fefce8 0%, #fde047 100%)', 
+            padding: '10px', 
+            borderRadius: '12px',
+            boxShadow: '0 2px 10px rgba(234, 179, 8, 0.2)'
+          }}>
+            <Trophy size={24} style={{ color: '#ca8a04', fill: '#ca8a04' }} />
+          </div>
           <div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Streak</p>
-            <p style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streaks.longest} Day{streaks.longest !== 1 ? 's' : ''}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Longest</p>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{streaks.longest} Day{streaks.longest !== 1 ? 's' : ''}</p>
           </div>
         </div>
       </div>
 
       {/* Hero Verse of the Day Card */}
       <div style={{
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(https://picsum.photos/seed/${dailyData.day}/800/600)`,
+        backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.8)), url(https://picsum.photos/seed/${dailyData.day}/800/600)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         borderRadius: 'var(--radius-lg)',
-        padding: '32px 24px',
+        padding: '40px 24px',
         textAlign: 'center',
         boxShadow: 'var(--shadow-lg)',
         position: 'relative',
         overflow: 'hidden',
-        color: '#ffffff'
+        color: '#ffffff',
+        border: '1px solid rgba(255,255,255,0.1)'
       }}>
         {/* Glassmorphism overlay behind text */}
         <div style={{
           position: 'absolute',
-          inset: '10px',
-          background: 'rgba(255,255,255,0.1)',
-          backdropFilter: 'blur(8px)',
+          inset: '16px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderRadius: 'var(--radius-md)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           zIndex: 1
         }}></div>
         
-        <div style={{ position: 'relative', zIndex: 2, padding: '16px' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '16px', opacity: 0.9 }}>
-            Verse of the Day
-          </p>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 500, fontStyle: 'italic', marginBottom: '20px', lineHeight: 1.4, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'relative', zIndex: 2, padding: '20px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '16px', background: 'rgba(0,0,0,0.3)', padding: '6px 12px', borderRadius: '20px' }}>
+             <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#fbbf24' }}>Verse of the Day</p>
+          </div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 500, fontStyle: 'italic', marginBottom: '24px', lineHeight: 1.5, textShadow: '0 4px 8px rgba(0,0,0,0.4)', letterSpacing: '-0.01em' }}>
             "{dailyData.verse.text}"
           </h2>
-          <p style={{ fontWeight: 800, fontSize: '1.1rem', opacity: 0.9 }}>{dailyData.verse.reference}</p>
+          <p style={{ fontWeight: 700, fontSize: '1.1rem', opacity: 0.9, letterSpacing: '0.5px' }}>{dailyData.verse.reference}</p>
         </div>
       </div>
 
-      <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '-16px', paddingLeft: '8px' }}>Explore</h3>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Link href="/bible" className="card" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          textDecoration: 'none',
-          padding: '16px 12px'
-        }}>
-          <div style={{
-            background: 'var(--accent-blue-light)',
-            padding: '12px',
-            borderRadius: '50%',
-            display: 'flex',
-            color: 'var(--accent-blue)'
-          }}>
-            <BookOpen size={28} />
-          </div>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Read Bible</h3>
-        </Link>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', paddingLeft: '4px', letterSpacing: '-0.02em' }}>Explore</h3>
         
-        <Link href="/search" className="card" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          textDecoration: 'none',
-          padding: '16px 12px'
-        }}>
-          <div style={{
-            background: '#e0e7ff', // indigo-100
-            padding: '12px',
-            borderRadius: '50%',
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <Link href="/bible" className="card" style={{
             display: 'flex',
-            color: '#4f46e5' // indigo-600
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
           }}>
-            <Search size={28} />
-          </div>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Search</h3>
-        </Link>
- 
-        <Link href="/plans" className="card" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          textDecoration: 'none',
-          padding: '16px 12px'
-        }}>
-          <div style={{
-            background: '#fce7f3', // pink-100
-            padding: '12px',
-            borderRadius: '50%',
+            <div style={{
+              background: 'var(--accent-blue-light)',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: 'var(--accent-blue)'
+            }}>
+              <BookOpen size={32} strokeWidth={2} />
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Read Bible</h3>
+          </Link>
+          
+          <Link href="/search" className="card" style={{
             display: 'flex',
-            color: '#db2777' // pink-600
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
           }}>
-            <Library size={28} />
-          </div>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Plans</h3>
-        </Link>
- 
-        <Link href="/saved" className="card" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          textDecoration: 'none',
-          padding: '16px 12px'
-        }}>
-          <div style={{
-            background: 'var(--accent-gold-light)',
-            padding: '12px',
-            borderRadius: '50%',
+            <div style={{
+              background: '#e0e7ff', // indigo-100
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: '#4f46e5' // indigo-600
+            }}>
+              <Search size={32} strokeWidth={2} />
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Search</h3>
+          </Link>
+   
+          <Link href="/plans" className="card" style={{
             display: 'flex',
-            color: 'var(--accent-gold)'
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
           }}>
-            <Bookmark size={28} />
-          </div>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Saved</h3>
-        </Link>
+            <div style={{
+              background: '#fce7f3', // pink-100
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: '#db2777' // pink-600
+            }}>
+              <Library size={32} strokeWidth={2} />
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Plans</h3>
+          </Link>
+   
+          <Link href="/saved" className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
+          }}>
+            <div style={{
+              background: 'var(--accent-gold-light)',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: 'var(--accent-gold)'
+            }}>
+              <Bookmark size={32} strokeWidth={2} />
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Saved</h3>
+          </Link>
+        </div>
       </div>
 
       {/* Daily Quiz Section */}
