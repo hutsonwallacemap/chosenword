@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
-import { Bookmark, Volume2, Loader2, WifiOff, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
@@ -34,7 +34,7 @@ const CHAPTER_COUNTS = {
 export default function BibleReader() {
   const [book, setBook] = useState('Genesis');
   const [chapter, setChapter] = useState(1);
-  const [primaryLang, setPrimaryLang] = useState('kjv');
+  const [primaryLang, setPrimaryLang] = useState('AKJV_offline');
   const [secondaryLang, setSecondaryLang] = useState('none');
   const [verses, setVerses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -69,9 +69,8 @@ export default function BibleReader() {
       try {
         let primaryVerses = [];
         
-        // Helper to get verses from either API or offline JSON
+        // Helper to get verses from offline JSON
         const getVerses = async (lang) => {
-          if (lang.endsWith('_offline')) {
             let baseFilename = lang.replace('_offline', '');
             const configLang = offlineTranslations.find(t => t.id === lang);
             if (configLang) {
@@ -81,7 +80,7 @@ export default function BibleReader() {
             let data = offlineData[lang];
             if (!data) {
               const res = await fetch(`/${baseFilename}.json`);
-              if (!res.ok) throw new Error('Failed to load offline Bible');
+              if (!res.ok) throw new Error('Failed to load Bible translation');
               data = await res.json();
               setOfflineData(prev => ({ ...prev, [lang]: data }));
             }
@@ -89,7 +88,7 @@ export default function BibleReader() {
             // Handle new JSON format (Array of books)
             if (data.verses && Array.isArray(data.verses)) {
               const chapterVerses = data.verses.filter(v => v.book_name === book && v.chapter.toString() === chapter.toString());
-              if (chapterVerses.length === 0) throw new Error('Chapter not found in offline data');
+              if (chapterVerses.length === 0) throw new Error('Chapter not found');
               return chapterVerses.map(v => ({
                 verseNum: parseInt(v.verse),
                 text: v.text.replace(/<[^>]*>?/gm, '')
@@ -97,9 +96,9 @@ export default function BibleReader() {
             }
             else if (data.books && Array.isArray(data.books)) {
               const bookData = data.books.find(b => b.name === book);
-              if (!bookData) throw new Error('Book not found in offline data');
+              if (!bookData) throw new Error('Book not found');
               const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
-              if (!chapterData) throw new Error('Chapter not found in offline data');
+              if (!chapterData) throw new Error('Chapter not found');
               
               return chapterData.verses.map(v => ({ 
                 verseNum: parseInt(v.verse), 
@@ -109,7 +108,7 @@ export default function BibleReader() {
             // Handle original JSON format (Nested objects)
             else {
               const chapterData = data[book]?.[chapter];
-              if (!chapterData) throw new Error('Chapter not found in offline data');
+              if (!chapterData) throw new Error('Chapter not found');
               
               let fetched = [];
               for (let v in chapterData) {
@@ -117,29 +116,6 @@ export default function BibleReader() {
               }
               return fetched;
             }
-          } else {
-            const res = await fetch(`/api/bible?bible=${lang}&reference=${encodeURIComponent(book + ' ' + chapter)}`);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            const data = await res.json();
-            
-            if (data.results && data.results.length > 0 && data.results[0].verses) {
-              const versesData = data.results[0].verses;
-              const langKey = Object.keys(versesData)[0]; // usually matches 'lang'
-              if (langKey) {
-                const chapterKey = Object.keys(versesData[langKey])[0]; // usually matches 'chapter'
-                if (chapterKey) {
-                  const versesObj = versesData[langKey][chapterKey];
-                  let fetched = [];
-                  for (let v in versesObj) {
-                    fetched.push({ verseNum: parseInt(v), text: versesObj[v].text.replace(/<[^>]*>?/gm, '') });
-                  }
-                  return fetched;
-                }
-              }
-            }
-            console.error("API response structure unexpected:", data);
-            throw new Error('Unexpected API response');
-          }
         };
 
         // Fetch primary translation
@@ -441,33 +417,21 @@ export default function BibleReader() {
         {/* Translation Row */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 calc(50% - 6px)', minWidth: '130px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Primary</label>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Translation</label>
             <select 
               className="custom-select"
               value={primaryLang} 
               onChange={(e) => setPrimaryLang(e.target.value)}
               style={{ width: '100%' }}
             >
-              <optgroup label="Online">
-                <option value="kjv">English: KJV</option>
-                <option value="web">English: WEB</option>
-                <option value="asv">English: ASV</option>
-                <option value="net">English: NET</option>
-                <option value="irv">Hindi (IRV)</option>
-                <option value="ta_irv">Tamil</option>
-                <option value="te_irv">Telugu</option>
-                <option value="bn_irv">Bengali</option>
-              </optgroup>
-              <optgroup label="Offline">
-                {offlineTranslations.map(t => (
-                  <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
-                ))}
-              </optgroup>
+              {offlineTranslations.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
             </select>
           </div>
 
           <div style={{ flex: '1 1 calc(50% - 6px)', minWidth: '130px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Secondary</label>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Compare</label>
             <select 
               className="custom-select"
               value={secondaryLang} 
@@ -475,21 +439,9 @@ export default function BibleReader() {
               style={{ width: '100%' }}
             >
               <option value="none">None</option>
-              <optgroup label="Online">
-                <option value="kjv">English: KJV</option>
-                <option value="web">English: WEB</option>
-                <option value="asv">English: ASV</option>
-                <option value="net">English: NET</option>
-                <option value="irv">Hindi (IRV)</option>
-                <option value="ta_irv">Tamil</option>
-                <option value="te_irv">Telugu</option>
-                <option value="bn_irv">Bengali</option>
-              </optgroup>
-              <optgroup label="Offline">
-                {offlineTranslations.map(t => (
-                  <option key={t.id} value={t.id}>{t.name} (OFFLINE)</option>
-                ))}
-              </optgroup>
+              {offlineTranslations.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -504,7 +456,7 @@ export default function BibleReader() {
       
       {error && (
         <div className="card" style={{ textAlign: 'center', color: '#ef4444', borderColor: '#fca5a5', backgroundColor: '#fef2f2' }}>
-          <WifiOff size={48} style={{ marginBottom: '8px', margin: '0 auto' }} />
+          <AlertCircle size={48} style={{ marginBottom: '8px', margin: '0 auto' }} />
           <p>{error}</p>
         </div>
       )}
