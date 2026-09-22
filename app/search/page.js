@@ -8,7 +8,7 @@ import { ArrowLeft, Search, Loader2 } from 'lucide-react';
 export default function SearchPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [translation, setTranslation] = useState('AKJV_offline');
+  const [translation, setTranslation] = useState('kjv_offline');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +37,8 @@ export default function SearchPage() {
       if (!data) {
         const res = await fetch(`/${fileName}.json`);
         if (!res.ok) throw new Error('Failed to load Bible database');
-        data = await res.json();
+        const rawText = await res.text();
+        data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
         setOfflineDataCache(prev => ({ ...prev, [fileName]: data }));
       }
 
@@ -150,7 +151,7 @@ export default function SearchPage() {
               style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
             >
               {offlineTranslations.map(t => (
-                <option key={t.id} value={t.id}>{t.name} (Fast Offline)</option>
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
           </div>

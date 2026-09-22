@@ -31,10 +31,54 @@ const CHAPTER_COUNTS = {
   "2 Peter": 3, "1 John": 5, "2 John": 1, "3 John": 1, "Jude": 1, "Revelation": 22
 };
 
+// Helper: generate all possible name variants for a book
+const getBookNameVariants = (name) => {
+  if (!name) return [];
+  const variants = new Set([name]);
+  // "1 Samuel" <-> "I Samuel", "2 Kings" <-> "II Kings", "3 John" <-> "III John"
+  if (/^1\s+/.test(name)) variants.add(name.replace(/^1\s+/, 'I '));
+  if (/^2\s+/.test(name)) variants.add(name.replace(/^2\s+/, 'II '));
+  if (/^3\s+/.test(name)) variants.add(name.replace(/^3\s+/, 'III '));
+  if (/^I\s+/.test(name) && !/^II/.test(name) && !/^III/.test(name)) variants.add(name.replace(/^I\s+/, '1 '));
+  if (/^II\s+/.test(name) && !/^III/.test(name)) variants.add(name.replace(/^II\s+/, '2 '));
+  if (/^III\s+/.test(name)) variants.add(name.replace(/^III\s+/, '3 '));
+
+  if (name.includes('Revelation')) {
+    variants.add('Revelation');
+    variants.add('Revelation of John');
+    variants.add('The Revelation of St. John');
+    variants.add('Revelation of St. John');
+    variants.add('The Revelation');
+  }
+  if (name.includes('Song of Solomon') || name.includes('Song of Songs')) {
+    variants.add('Song of Solomon');
+    variants.add('Song of Songs');
+    variants.add('Canticles');
+    variants.add('Song of Songs of Solomon');
+  }
+  if (name.includes('Psalm')) {
+    variants.add('Psalms');
+    variants.add('Psalm');
+  }
+  return Array.from(variants);
+};
+
+// Helper: find a book in a list by trying all name variants
+const findBookInData = (booksList, bookName) => {
+  if (!booksList || !Array.isArray(booksList)) return null;
+  const variants = getBookNameVariants(bookName);
+  for (const variant of variants) {
+    const found = booksList.find(b => b && b.name === variant);
+    if (found) return found;
+  }
+  const lowerVariants = variants.map(v => v.toLowerCase());
+  return booksList.find(b => b && b.name && lowerVariants.includes(b.name.toLowerCase())) || null;
+};
+
 export default function BibleReader() {
   const [book, setBook] = useState('Genesis');
   const [chapter, setChapter] = useState(1);
-  const [primaryLang, setPrimaryLang] = useState('AKJV_offline');
+  const [primaryLang, setPrimaryLang] = useState('kjv_offline');
   const [secondaryLang, setSecondaryLang] = useState('none');
   const [verses, setVerses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +112,7 @@ export default function BibleReader() {
       setError('');
       try {
         let primaryVerses = [];
-        
+
         // Helper to get verses from offline JSON
         const getVerses = async (lang) => {
             let baseFilename = lang.replace('_offline', '');
@@ -81,38 +125,77 @@ export default function BibleReader() {
             if (!data) {
               const res = await fetch(`/${baseFilename}.json`);
               if (!res.ok) throw new Error('Failed to load Bible translation');
-              data = await res.json();
+              const rawText = await res.text();
+              data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
               setOfflineData(prev => ({ ...prev, [lang]: data }));
             }
 
-            // Handle new JSON format (Array of books)
+            // Handle flat verses array format (e.g. kjv.json, net.json, bishops.json)
             if (data.verses && Array.isArray(data.verses)) {
-              const chapterVerses = data.verses.filter(v => v.book_name === book && v.chapter.toString() === chapter.toString());
+              const variants = getBookNameVariants(book);
+              const chapterVerses = data.verses.filter(v => 
+                variants.includes(v.book_name) && 
+                v.chapter.toString() === chapter.toString()
+              );
               if (chapterVerses.length === 0) throw new Error('Chapter not found');
               return chapterVerses.map(v => ({
                 verseNum: parseInt(v.verse),
-                text: v.text.replace(/<[^>]*>?/gm, '')
+                text: (v.text || '').replace(/<[^>]*>?/gm, '')
               }));
             }
+            // Handle books array format (e.g. AKJV.json, BBE.json, ASV.json)
             else if (data.books && Array.isArray(data.books)) {
-              const bookData = data.books.find(b => b.name === book);
+              const bookData = findBookInData(data.books, book);
               if (!bookData) throw new Error('Book not found');
-              const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
+              const chapterData = bookData.chapters.find(c => 
+                (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
+              );
               if (!chapterData) throw new Error('Chapter not found');
               
-              return chapterData.verses.map(v => ({ 
+              return (chapterData.verses || []).map(v => ({ 
                 verseNum: parseInt(v.verse), 
-                text: v.text.replace(/<[^>]*>?/gm, '') 
+                text: (v.text || '').replace(/<[^>]*>?/gm, '') 
               }));
             } 
-            // Handle original JSON format (Nested objects)
+            // Handle root array of books
+            else if (Array.isArray(data)) {
+              const bookData = findBookInData(data, book);
+              if (!bookData) throw new Error('Book not found');
+              const chapterData = (bookData.chapters || []).find(c => 
+                (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
+              );
+              if (!chapterData) throw new Error('Chapter not found');
+              
+              return (chapterData.verses || []).map(v => ({ 
+                verseNum: parseInt(v.verse), 
+                text: (v.text || '').replace(/<[^>]*>?/gm, '') 
+              }));
+            }
+            // Handle key-value object format (e.g. hindi_offline.json, ta_offline.json)
             else {
-              const chapterData = data[book]?.[chapter];
+              const variants = getBookNameVariants(book);
+              let chapterData = null;
+              for (const variant of variants) {
+                if (data[variant] && data[variant][chapter]) {
+                  chapterData = data[variant][chapter];
+                  break;
+                }
+              }
+              if (!chapterData) {
+                const keys = Object.keys(data);
+                for (const variant of variants) {
+                  const matchedKey = keys.find(k => k.toLowerCase() === variant.toLowerCase());
+                  if (matchedKey && data[matchedKey] && data[matchedKey][chapter]) {
+                    chapterData = data[matchedKey][chapter];
+                    break;
+                  }
+                }
+              }
               if (!chapterData) throw new Error('Chapter not found');
               
               let fetched = [];
               for (let v in chapterData) {
-                fetched.push({ verseNum: parseInt(v), text: chapterData[v] });
+                fetched.push({ verseNum: parseInt(v), text: (chapterData[v] || '').replace(/<[^>]*>?/gm, '') });
               }
               return fetched;
             }
@@ -244,36 +327,74 @@ export default function BibleReader() {
     
     const results = [];
     const targetVerseNum = selectedVerse.verseObj.verseNum.toString();
+    const variants = getBookNameVariants(book);
 
     for (const langObj of offlineTranslations) {
       try {
-        const res = await fetch(`/${langObj.filename}.json`);
-        if (!res.ok) continue;
-        const data = await res.json();
+        let data = offlineData[langObj.id];
+        if (!data) {
+          const res = await fetch(`/${langObj.filename}.json`);
+          if (!res.ok) continue;
+          const rawText = await res.text();
+          data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
+          setOfflineData(prev => ({ ...prev, [langObj.id]: data }));
+        }
         
         let text = '';
         if (data.verses && Array.isArray(data.verses)) {
-          const verseData = data.verses.find(v => v.book_name === book && v.chapter.toString() === chapter.toString() && v.verse.toString() === targetVerseNum);
+          const verseData = data.verses.find(v => 
+            variants.includes(v.book_name) && 
+            v.chapter.toString() === chapter.toString() && 
+            v.verse.toString() === targetVerseNum
+          );
           if (verseData) text = verseData.text;
-        } else if (Array.isArray(data)) {
-          const bookData = data.find(b => b.name === book);
+        } else if (data.books && Array.isArray(data.books)) {
+          const bookData = findBookInData(data.books, book);
           if (bookData) {
-            const chapterData = bookData.chapters.find(c => c.chapter.toString() === chapter.toString());
-            if (chapterData) {
+            const chapterData = bookData.chapters.find(c => 
+              (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
+            );
+            if (chapterData && chapterData.verses) {
+              const verseData = chapterData.verses.find(v => v.verse.toString() === targetVerseNum);
+              if (verseData) text = verseData.text;
+            }
+          }
+        } else if (Array.isArray(data)) {
+          const bookData = findBookInData(data, book);
+          if (bookData) {
+            const chapterData = (bookData.chapters || []).find(c => 
+              (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
+            );
+            if (chapterData && chapterData.verses) {
               const verseData = chapterData.verses.find(v => v.verse.toString() === targetVerseNum);
               if (verseData) text = verseData.text;
             }
           }
         } else {
-          // Object-based schema (like Hindi/Tamil offline)
-          const c = data[book]?.[chapter];
+          let c = null;
+          for (const variant of variants) {
+            if (data[variant] && data[variant][chapter]) {
+              c = data[variant][chapter];
+              break;
+            }
+          }
+          if (!c) {
+            const keys = Object.keys(data);
+            for (const variant of variants) {
+              const matchedKey = keys.find(k => k.toLowerCase() === variant.toLowerCase());
+              if (matchedKey && data[matchedKey] && data[matchedKey][chapter]) {
+                c = data[matchedKey][chapter];
+                break;
+              }
+            }
+          }
           if (c && c[targetVerseNum]) {
-            text = c[targetVerseNum].replace(/<[^>]*>?/gm, '');
+            text = c[targetVerseNum];
           }
         }
         
         if (text) {
-          results.push({ name: langObj.name, text });
+          results.push({ name: langObj.name, text: text.replace(/<[^>]*>?/gm, '') });
         }
       } catch (e) {
         console.error(`Error loading compare for ${langObj.name}`, e);
