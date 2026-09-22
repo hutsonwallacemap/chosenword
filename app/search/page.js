@@ -35,8 +35,18 @@ export default function SearchPage() {
 
       let data = offlineDataCache[fileName];
       if (!data) {
-        const res = await fetch(`/${fileName}.json`);
-        if (!res.ok) throw new Error('Failed to load Bible database');
+        const candidates = [fileName, fileName.toUpperCase(), fileName.toLowerCase()];
+        const tried = new Set();
+        let res = null;
+        for (const name of candidates) {
+          if (tried.has(name)) continue;
+          tried.add(name);
+          try {
+            res = await fetch(`/${name}.json`);
+            if (res.ok) break;
+          } catch (e) {}
+        }
+        if (!res || !res.ok) throw new Error('Failed to load Bible database');
         const rawText = await res.text();
         data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
         setOfflineDataCache(prev => ({ ...prev, [fileName]: data }));

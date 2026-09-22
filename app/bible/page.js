@@ -75,6 +75,38 @@ const findBookInData = (booksList, bookName) => {
   return booksList.find(b => b && b.name && lowerVariants.includes(b.name.toLowerCase())) || null;
 };
 
+// In-memory cache for loaded translation JSONs
+const bibleDataCache = {};
+
+const fetchTranslationData = async (filename) => {
+  if (bibleDataCache[filename]) return bibleDataCache[filename];
+
+  // Try exact, uppercase, and lowercase filenames to handle case-sensitive Linux servers
+  const candidates = [filename, filename.toUpperCase(), filename.toLowerCase()];
+  const tried = new Set();
+  let res = null;
+
+  for (const name of candidates) {
+    if (tried.has(name)) continue;
+    tried.add(name);
+    try {
+      res = await fetch(`/${name}.json`);
+      if (res.ok) break;
+    } catch (e) {
+      // Continue trying next candidate
+    }
+  }
+
+  if (!res || !res.ok) {
+    throw new Error(`Failed to load Bible translation (${filename})`);
+  }
+
+  const rawText = await res.text();
+  const data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
+  bibleDataCache[filename] = data;
+  return data;
+};
+
 export default function BibleReader() {
   const [book, setBook] = useState('Genesis');
   const [chapter, setChapter] = useState(1);
@@ -85,7 +117,6 @@ export default function BibleReader() {
   const [error, setError] = useState('');
   const [savedVerses, setSavedVerses] = useState([]);
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
-  const [offlineData, setOfflineData] = useState({});
   const [selectedVerse, setSelectedVerse] = useState(null);
   const [compareModal, setCompareModal] = useState({ isOpen: false, loading: false, data: [] });
   const [verseNotes, setVerseNotes] = useState({});
@@ -121,14 +152,7 @@ export default function BibleReader() {
               baseFilename = configLang.filename;
             }
             
-            let data = offlineData[lang];
-            if (!data) {
-              const res = await fetch(`/${baseFilename}.json`);
-              if (!res.ok) throw new Error('Failed to load Bible translation');
-              const rawText = await res.text();
-              data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
-              setOfflineData(prev => ({ ...prev, [lang]: data }));
-            }
+            const data = await fetchTranslationData(baseFilename);
 
             // Handle flat verses array format (e.g. kjv.json, net.json, bishops.json)
             if (data.verses && Array.isArray(data.verses)) {
@@ -231,7 +255,7 @@ export default function BibleReader() {
       }
     }
     fetchChapter();
-  }, [book, chapter, primaryLang, secondaryLang, offlineData]);
+  }, [book, chapter, primaryLang, secondaryLang]);
 
   // Handle Chapter Navigation
   const handleNextChapter = () => {
@@ -331,14 +355,7 @@ export default function BibleReader() {
 
     for (const langObj of offlineTranslations) {
       try {
-        let data = offlineData[langObj.id];
-        if (!data) {
-          const res = await fetch(`/${langObj.filename}.json`);
-          if (!res.ok) continue;
-          const rawText = await res.text();
-          data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
-          setOfflineData(prev => ({ ...prev, [langObj.id]: data }));
-        }
+        const data = await fetchTranslationData(langObj.filename);
         
         let text = '';
         if (data.verses && Array.isArray(data.verses)) {

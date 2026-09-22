@@ -1,5 +1,5 @@
 export const offlineTranslations = [
-  { id: 'kjv_offline', name: 'English: KJV', filename: 'kjv' },
+  { id: 'kjv_offline', name: 'English: KJV', filename: 'KJV' },
   { id: 'AKJV_offline', name: 'English: AKJV', filename: 'AKJV' },
   { id: 'ASV_offline', name: 'English: ASV', filename: 'ASV' },
   { id: 'BBE_offline', name: 'English: BBE', filename: 'BBE' },
