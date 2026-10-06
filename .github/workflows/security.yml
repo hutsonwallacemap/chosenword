@@ -1,0 +1,58 @@
+name: Security & Vulnerability Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
+  strix-scan:
+    name: Strix AI Penetration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Strix API Key
+        id: check-secrets
+        run: |
+          if [ -n "${{ secrets.LLM_API_KEY }}" ]; then
+            echo "has_secret=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_secret=false" >> $GITHUB_OUTPUT
+            echo "Notice: LLM_API_KEY secret is not set. To run Strix AI scans in GitHub Actions, add STRIX_LLM and LLM_API_KEY to repository secrets."
+          fi
+
+      - name: Install Strix
+        if: steps:check-secrets.outputs.has_secret == 'true'
+        run: curl -sSL https://strix.ai/install | bash
+
+      - name: Run Strix Security Scan
+        if: steps:check-secrets.outputs.has_secret == 'true'
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM || 'openai/gpt-4o' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: strix -n -t ./ --scan-mode quick --max-budget 10

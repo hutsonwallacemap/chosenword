@@ -24,7 +24,8 @@ export default function RootLayout({ children }) {
                 document.documentElement.classList.add('dark-theme');
               }
               const fontSize = localStorage.getItem('cw_font_size');
-              if (fontSize) {
+              const validSizes = ['small', 'medium', 'large', 'xlarge'];
+              if (fontSize && validSizes.includes(fontSize)) {
                 document.documentElement.classList.add('font-' + fontSize);
               }
             } catch (e) {}
