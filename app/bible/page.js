@@ -120,6 +120,9 @@ export default function BibleReader() {
   const [savedVerses, setSavedVerses] = useState([]);
   const [bookmarkedChapters, setBookmarkedChapters] = useState([]);
   const [selectedVerse, setSelectedVerse] = useState(null);
+  const [selectedVerses, setSelectedVerses] = useState([]);
+  const [activeHighlightColor, setActiveHighlightColor] = useState('gold');
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const [compareModal, setCompareModal] = useState({ isOpen: false, loading: false, data: [] });
   const [verseNotes, setVerseNotes] = useState({});
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
@@ -361,41 +364,150 @@ export default function BibleReader() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle Verse Highlighting
-  const toggleHighlight = (verseObj, text, langLabel) => {
-    const ref = `${book} ${chapter}:${verseObj.verseNum}`;
-    let newSaved;
-    if (savedVerses.some(v => v.ref === ref && v.text === text)) {
-      newSaved = savedVerses.filter(v => !(v.ref === ref && v.text === text));
+  // Multi-verse Selection & Highlighting Handlers
+  const isVerseSelected = (verseNum, text) => {
+    return selectedVerses.some(sv => sv.verseNum.toString() === verseNum.toString() && sv.text === text);
+  };
+
+  const getHighlightData = (verseNum, text) => {
+    const ref = `${book} ${chapter}:${verseNum}`;
+    return savedVerses.find(v => v.ref === ref && v.text === text);
+  };
+
+  const getHighlightClass = (verseNum, text) => {
+    const h = getHighlightData(verseNum, text);
+    if (!h) return '';
+    return `highlighted highlighted-${h.color || 'gold'}`;
+  };
+
+  const getSelectedRefString = (items = selectedVerses) => {
+    if (!items || items.length === 0) return '';
+    const nums = Array.from(new Set(items.map(v => parseInt(v.verseNum)))).sort((a, b) => a - b);
+    if (nums.length === 1) return `${book} ${chapter}:${nums[0]}`;
+    const isSequential = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+    if (isSequential) {
+      return `${book} ${chapter}:${nums[0]}-${nums[nums.length - 1]}`;
     } else {
-      newSaved = [...savedVerses, { ref, text, lang: langLabel }];
+      return `${book} ${chapter}:${nums.join(', ')}`;
     }
+  };
+
+  const handleVerseClick = (verseObj, text, langLabel) => {
+    const vNum = verseObj.verseNum.toString();
+    const alreadySelected = selectedVerses.some(sv => sv.verseNum.toString() === vNum && sv.text === text);
+    
+    let updated;
+    if (alreadySelected) {
+      updated = selectedVerses.filter(sv => !(sv.verseNum.toString() === vNum && sv.text === text));
+    } else {
+      updated = [...selectedVerses, { verseObj, verseNum: vNum, text, langLabel }];
+    }
+    updated.sort((a, b) => parseInt(a.verseNum) - parseInt(b.verseNum));
+    setSelectedVerses(updated);
+    setSelectedVerse(updated.length > 0 ? updated[0] : null);
+  };
+
+  const handleSelectRange = () => {
+    if (selectedVerses.length === 0) return;
+    const nums = selectedVerses.map(v => parseInt(v.verseNum));
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    const rangeItems = [];
+    verses.forEach(v => {
+      const vNum = parseInt(v.verseNum);
+      if (vNum >= min && vNum <= max) {
+        rangeItems.push({
+          verseObj: v,
+          verseNum: v.verseNum.toString(),
+          text: v.primaryText,
+          langLabel: primaryLang
+        });
+      }
+    });
+    rangeItems.sort((a, b) => parseInt(a.verseNum) - parseInt(b.verseNum));
+    setSelectedVerses(rangeItems);
+    setSelectedVerse(rangeItems[0]);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedVerses([]);
+    setSelectedVerse(null);
+  };
+
+  const handleToggleHighlightSelected = (color = activeHighlightColor) => {
+    if (selectedVerses.length === 0) return;
+    let newSaved = [...savedVerses];
+    const allHighlightedInColor = selectedVerses.every(sv => {
+      const ref = `${book} ${chapter}:${sv.verseNum}`;
+      return newSaved.some(s => s.ref === ref && s.text === sv.text && (s.color || 'gold') === color);
+    });
+
+    selectedVerses.forEach(sv => {
+      const ref = `${book} ${chapter}:${sv.verseNum}`;
+      if (allHighlightedInColor) {
+        newSaved = newSaved.filter(s => !(s.ref === ref && s.text === sv.text));
+      } else {
+        const existingIdx = newSaved.findIndex(s => s.ref === ref && s.text === sv.text);
+        if (existingIdx >= 0) {
+          newSaved[existingIdx] = { ref, text: sv.text, lang: sv.langLabel, color };
+        } else {
+          newSaved.push({ ref, text: sv.text, lang: sv.langLabel, color });
+        }
+      }
+    });
     setSavedVerses(newSaved);
     localStorage.setItem('cw_saved_verses', JSON.stringify(newSaved));
+    handleClearSelection();
+  };
+
+  // Backward compatibility wrapper
+  const toggleHighlight = (verseObj, text, langLabel) => {
+    handleVerseClick(verseObj, text, langLabel);
+    handleToggleHighlightSelected(activeHighlightColor);
   };
 
   // Action Menu Handlers
   const handleCopy = async () => {
-    if (!selectedVerse) return;
+    const targets = selectedVerses.length > 0 ? selectedVerses : (selectedVerse ? [selectedVerse] : []);
+    if (targets.length === 0) return;
+    const refStr = getSelectedRefString(targets);
+    const formattedVerses = targets.map(sv => {
+      const clean = sv.text.replace(/<[^>]*>?/gm, '').trim();
+      return `${sv.verseNum} ${clean}`;
+    }).join('\n');
+    const fullText = `${refStr} (${primaryLang.replace('_offline', '').toUpperCase()})\n${formattedVerses}`;
     try {
-      await navigator.clipboard.writeText(`${book} ${chapter}:${selectedVerse.verseObj.verseNum} - ${selectedVerse.text}`);
-      setSelectedVerse(null);
+      await navigator.clipboard.writeText(fullText);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+      setTimeout(() => handleClearSelection(), 600);
     } catch (err) {
       console.error("Failed to copy", err);
     }
   };
 
   const handleShare = async () => {
-    if (!selectedVerse) return;
+    const targets = selectedVerses.length > 0 ? selectedVerses : (selectedVerse ? [selectedVerse] : []);
+    if (targets.length === 0) return;
+    const refStr = getSelectedRefString(targets);
+    const formattedVerses = targets.map(sv => {
+      const clean = sv.text.replace(/<[^>]*>?/gm, '').trim();
+      return `${sv.verseNum} ${clean}`;
+    }).join(' ');
+    const fullText = `"${formattedVerses}" — ${refStr} (${primaryLang.replace('_offline', '').toUpperCase()}) | via Chosen Word`;
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Chosen Word - ${book} ${chapter}:${selectedVerse.verseObj.verseNum}`,
-          text: `${selectedVerse.text} (${book} ${chapter}:${selectedVerse.verseObj.verseNum})`,
+          title: `Chosen Word - ${refStr}`,
+          text: fullText,
           url: window.location.href
         });
+      } else {
+        await navigator.clipboard.writeText(fullText);
+        setCopyFeedback(true);
+        setTimeout(() => setCopyFeedback(false), 2000);
       }
-      setSelectedVerse(null);
+      handleClearSelection();
     } catch (err) {
       console.error("Error sharing", err);
     }
@@ -409,7 +521,7 @@ export default function BibleReader() {
     setVerseNotes(newNotes);
     localStorage.setItem('cw_notes', JSON.stringify(newNotes));
     setNoteModal({ isOpen: false, verseRef: '', text: '' });
-    setSelectedVerse(null);
+    handleClearSelection();
   };
 
   const handleCompare = async () => {
@@ -1037,8 +1149,8 @@ export default function BibleReader() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {/* Primary Verse */}
                   <p 
-                    className={`verse-item ${isHighlighted(v.verseNum, v.primaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.primaryText ? 'selected-verse' : ''}`}
-                    onClick={() => setSelectedVerse({ verseObj: v, text: v.primaryText, langLabel: primaryLang })}
+                    className={`verse-item ${getHighlightClass(v.verseNum, v.primaryText)} ${isVerseSelected(v.verseNum, v.primaryText) ? 'selected-verse' : ''}`}
+                    onClick={() => handleVerseClick(v, v.primaryText, primaryLang)}
                     style={{ fontSize: '1.25rem', margin: 0, cursor: 'pointer', lineHeight: 1.6, display: 'inline', color: 'var(--text-primary)' }}
                   >
                     {v.primaryText}
@@ -1050,8 +1162,8 @@ export default function BibleReader() {
                   {/* Secondary Verse (Dual Mode) */}
                   {secondaryLang !== 'none' && v.secondaryText && (
                     <p 
-                      className={`verse-item ${isHighlighted(v.verseNum, v.secondaryText) ? 'highlighted' : ''} ${selectedVerse?.text === v.secondaryText ? 'selected-verse' : ''}`}
-                      onClick={() => setSelectedVerse({ verseObj: v, text: v.secondaryText, langLabel: secondaryLang })}
+                      className={`verse-item ${getHighlightClass(v.verseNum, v.secondaryText)} ${isVerseSelected(v.verseNum, v.secondaryText) ? 'selected-verse' : ''}`}
+                      onClick={() => handleVerseClick(v, v.secondaryText, secondaryLang)}
                       style={{ 
                         fontSize: '1.15rem', 
                         margin: 0, 
@@ -1121,93 +1233,187 @@ export default function BibleReader() {
         </div>
       )}
 
-      {/* Floating Action Menu Overlay */}
-      {selectedVerse && (
+      {/* Floating Action Menu Overlay (Multi-Verse Support) */}
+      {(selectedVerses.length > 0 || selectedVerse) && (
         <div 
-          onClick={() => setSelectedVerse(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '80px' }}
+          onClick={handleClearSelection}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '76px', background: 'rgba(0,0,0,0.15)' }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
             className="glass-panel"
             style={{
-              padding: '12px 24px',
-              borderRadius: '100px',
+              padding: '14px 20px',
+              borderRadius: '24px',
               display: 'flex',
-              gap: '24px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              flexDirection: 'column',
+              gap: '12px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
               animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              border: '1px solid rgba(255, 255, 255, 0.3)'
+              border: '1px solid rgba(255, 255, 255, 0.35)',
+              maxWidth: '96vw',
+              backdropFilter: 'blur(24px)'
             }}
           >
-            <button 
-              onClick={() => { toggleHighlight(selectedVerse.verseObj, selectedVerse.text, selectedVerse.langLabel); setSelectedVerse(null); }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? 'var(--accent-gold)' : 'var(--text-primary)' }}
-            >
-              <Highlighter size={20} style={{ fill: isHighlighted(selectedVerse.verseObj.verseNum, selectedVerse.text) ? 'var(--accent-gold)' : 'transparent' }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Highlight</span>
-            </button>
-            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
-            <button 
-              onClick={handleCopy}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
-            >
-              <Copy size={20} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Copy</span>
-            </button>
-            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
-            <button 
-              onClick={() => {
-                const ref = `${book} ${chapter}:${selectedVerse.verseObj.verseNum}`;
-                setNoteModal({ isOpen: true, verseRef: ref, text: verseNotes[ref] || '' });
-              }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
-            >
-              <Edit3 size={20} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Note</span>
-            </button>
-            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
-            <button 
-              onClick={handleShare}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
-            >
-              <Share2 size={20} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
-            </button>
-            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
-            <button 
-              onClick={handleCompare}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
-            >
-              <BookOpen size={20} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
-            </button>
-            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
-            <button 
-              onClick={() => {
-                const cleanText = selectedVerse.text.replace(/<[^>]*>?/gm, '');
-                const rawWords = cleanText.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
-                // Prefer rich biblical terms, or words with length >= 4, fallback to first word
-                const keyWord = rawWords.find(w => lookupBiblicalWord(w)) || 
-                                rawWords.find(w => w.length >= 4 && !['that', 'this', 'with', 'from', 'they', 'them', 'then', 'there', 'were', 'have'].includes(w.toLowerCase())) || 
-                                rawWords[0] || 'grace';
-                setDictionaryModal({
-                  isOpen: true,
-                  verseText: cleanText,
-                  selectedWord: keyWord,
-                  wordData: null,
-                  loading: true,
-                  error: '',
-                  searchInput: keyWord
-                });
-                handleLookupWord(keyWord);
-                setSelectedVerse(null);
-              }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
-            >
-              <BookA size={20} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Define</span>
-            </button>
+            {/* Top Bar: Reference, Verse Count, Range Selector, Close */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={14} style={{ color: 'var(--accent-gold)' }} />
+                  {getSelectedRefString()}
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--accent-gold-light)', color: 'var(--accent-gold)', fontWeight: 700 }}>
+                  {selectedVerses.length} {selectedVerses.length === 1 ? 'verse' : 'verses'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {selectedVerses.length >= 2 && (
+                  <button
+                    onClick={handleSelectRange}
+                    title="Fill all verses in between"
+                    style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Select Range
+                  </button>
+                )}
+                <button
+                  onClick={handleClearSelection}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                  title="Deselect all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Middle Row: Highlight Color Swatches */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>Color:</span>
+                {[
+                  { id: 'gold', bg: '#f59e0b', label: 'Gold' },
+                  { id: 'emerald', bg: '#10b981', label: 'Emerald' },
+                  { id: 'sky', bg: '#3b82f6', label: 'Sky' },
+                  { id: 'rose', bg: '#f43f5e', label: 'Rose' }
+                ].map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setActiveHighlightColor(c.id);
+                      handleToggleHighlightSelected(c.id);
+                    }}
+                    title={`Highlight in ${c.label}`}
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      backgroundColor: c.bg,
+                      border: activeHighlightColor === c.id ? '2px solid #fff' : '2px solid transparent',
+                      boxShadow: activeHighlightColor === c.id ? `0 0 0 2px ${c.bg}` : 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'transform 0.15s ease'
+                    }}
+                  />
+                ))}
+              </div>
+
+              {copyFeedback && (
+                <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Check size={14} /> Copied to Clipboard!
+                </span>
+              )}
+            </div>
+
+            {/* Bottom Row: Actions (Highlight, Copy, Note, Share, Compare, Define) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'space-around', paddingTop: '4px' }}>
+              <button 
+                onClick={() => handleToggleHighlightSelected(activeHighlightColor)}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--accent-gold)', cursor: 'pointer' }}
+                title="Highlight selected verses"
+              >
+                <Highlighter size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Highlight</span>
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+
+              <button 
+                onClick={handleCopy}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Copy formatted passage"
+              >
+                <Copy size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>{copyFeedback ? 'Copied' : 'Copy'}</span>
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+
+              <button 
+                onClick={() => {
+                  const ref = getSelectedRefString();
+                  setNoteModal({ isOpen: true, verseRef: ref, text: verseNotes[ref] || '' });
+                }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Add personal study note"
+              >
+                <Edit3 size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Note</span>
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+
+              <button 
+                onClick={handleShare}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Share verses"
+              >
+                <Share2 size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Share</span>
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+
+              <button 
+                onClick={handleCompare}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Compare translations"
+              >
+                <BookOpen size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
+              </button>
+
+              <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+
+              <button 
+                onClick={() => {
+                  const firstSelected = selectedVerses[0] || selectedVerse;
+                  if (!firstSelected) return;
+                  const cleanText = firstSelected.text.replace(/<[^>]*>?/gm, '');
+                  const rawWords = cleanText.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
+                  const keyWord = rawWords.find(w => lookupBiblicalWord(w)) || 
+                                  rawWords.find(w => w.length >= 4 && !['that', 'this', 'with', 'from', 'they', 'them', 'then', 'there', 'were', 'have'].includes(w.toLowerCase())) || 
+                                  rawWords[0] || 'grace';
+                  setDictionaryModal({
+                    isOpen: true,
+                    verseText: cleanText,
+                    selectedWord: keyWord,
+                    wordData: null,
+                    loading: true,
+                    error: '',
+                    searchInput: keyWord
+                  });
+                  handleLookupWord(keyWord);
+                  handleClearSelection();
+                }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Define key biblical words"
+              >
+                <BookA size={19} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Define</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -144,13 +144,48 @@ button:active {
   transform: scale(0.99);
 }
 
-.highlighted {
-  background-color: var(--accent-gold-light);
-  color: var(--accent-gold);
-  padding: 2px 6px;
-  border-radius: 6px;
+.verse-item.selected-verse {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  outline: 2px dashed var(--accent-gold) !important;
+  outline-offset: 3px;
+  border-radius: 8px;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
+}
+
+.highlighted, .highlighted-gold {
+  background-color: rgba(245, 158, 11, 0.22);
+  color: var(--text-primary);
+  border-left: 3px solid #f59e0b;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-weight: 500;
-  box-shadow: 0 0 10px var(--accent-gold-light);
+}
+
+.highlighted-emerald {
+  background-color: rgba(16, 185, 129, 0.22);
+  color: var(--text-primary);
+  border-left: 3px solid #10b981;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.highlighted-sky {
+  background-color: rgba(59, 130, 246, 0.22);
+  color: var(--text-primary);
+  border-left: 3px solid #3b82f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.highlighted-rose {
+  background-color: rgba(244, 63, 94, 0.22);
+  color: var(--text-primary);
+  border-left: 3px solid #f43f5e;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .custom-select {
