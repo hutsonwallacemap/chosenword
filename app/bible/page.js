@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
 import { bookSummaries } from '../data/bookSummaries';
-import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap } from 'lucide-react';
+import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked } from 'lucide-react';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
@@ -122,6 +122,15 @@ export default function BibleReader() {
   const [compareModal, setCompareModal] = useState({ isOpen: false, loading: false, data: [] });
   const [verseNotes, setVerseNotes] = useState({});
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
+  const [dictionaryModal, setDictionaryModal] = useState({
+    isOpen: false,
+    verseText: '',
+    selectedWord: '',
+    wordData: null,
+    loading: false,
+    error: '',
+    searchInput: ''
+  });
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Study summary and chapter notes state
@@ -477,6 +486,46 @@ export default function BibleReader() {
     
     setCompareModal({ isOpen: true, loading: false, data: results });
     setSelectedVerse(null);
+  };
+
+  const handleLookupWord = async (rawWord) => {
+    if (!rawWord) return;
+    const cleanWord = rawWord.toLowerCase().replace(/[^a-z]/g, '').trim();
+    if (!cleanWord) return;
+
+    setDictionaryModal(prev => ({ ...prev, selectedWord: cleanWord, searchInput: cleanWord, loading: true, error: '', wordData: null }));
+    try {
+      const res = await fetch(`/api/dictionary?word=${encodeURIComponent(cleanWord)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setDictionaryModal(prev => ({ ...prev, loading: false, error: data.error || `No definition found for "${cleanWord}".` }));
+      } else {
+        setDictionaryModal(prev => ({ ...prev, loading: false, wordData: data }));
+      }
+    } catch (e) {
+      setDictionaryModal(prev => ({ ...prev, loading: false, error: 'Failed to fetch definition.' }));
+    }
+  };
+
+  const handlePlayWordAudio = (word, audioUrl) => {
+    if (audioUrl) {
+      try {
+        const audio = new Audio(audioUrl);
+        audio.play().catch(() => playSpeechSynth(word));
+        return;
+      } catch (e) {}
+    }
+    playSpeechSynth(word);
+  };
+
+  const playSpeechSynth = (word) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(word);
+      utt.lang = 'en-US';
+      utt.rate = 0.9;
+      window.speechSynthesis.speak(utt);
+    }
   };
 
   const handlePlayAudio = () => {
@@ -1110,6 +1159,28 @@ export default function BibleReader() {
               <BookOpen size={20} />
               <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
             </button>
+            <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
+            <button 
+              onClick={() => {
+                const words = selectedVerse.text.replace(/<[^>]*>?/gm, '').split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
+                const firstWord = words[0] || 'grace';
+                setDictionaryModal({
+                  isOpen: true,
+                  verseText: selectedVerse.text.replace(/<[^>]*>?/gm, ''),
+                  selectedWord: firstWord,
+                  wordData: null,
+                  loading: true,
+                  error: '',
+                  searchInput: firstWord
+                });
+                handleLookupWord(firstWord);
+                setSelectedVerse(null);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}
+            >
+              <BookA size={20} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Define</span>
+            </button>
           </div>
         </div>
       )}
@@ -1174,6 +1245,210 @@ export default function BibleReader() {
               >
                 Save Note
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dictionary / Lexicon Modal */}
+      {dictionaryModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '520px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BookMarked size={18} style={{ color: 'var(--accent-blue)' }} />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Biblical Lexicon & Dictionary</h3>
+              </div>
+              <button 
+                onClick={() => setDictionaryModal(prev => ({ ...prev, isOpen: false }))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Search Bar */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (dictionaryModal.searchInput) handleLookupWord(dictionaryModal.searchInput);
+                }}
+                style={{ display: 'flex', gap: '8px' }}
+              >
+                <input
+                  type="text"
+                  value={dictionaryModal.searchInput}
+                  onChange={(e) => setDictionaryModal(prev => ({ ...prev, searchInput: e.target.value }))}
+                  placeholder="Type word to define..."
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--accent-blue)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Lookup
+                </button>
+              </form>
+
+              {/* Word Chips from Verse */}
+              {dictionaryModal.verseText && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Tap any word from this verse:
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {dictionaryModal.verseText
+                      .split(/\s+/)
+                      .map(w => w.replace(/[^a-zA-Z]/g, ''))
+                      .filter(w => w.length > 1)
+                      .slice(0, 16)
+                      .map((word, wIdx) => {
+                        const isCurrent = dictionaryModal.selectedWord.toLowerCase() === word.toLowerCase();
+                        return (
+                          <button
+                            key={wIdx}
+                            onClick={() => handleLookupWord(word)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '100px',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              border: '1px solid',
+                              borderColor: isCurrent ? 'var(--accent-blue)' : 'var(--border-color)',
+                              backgroundColor: isCurrent ? 'var(--accent-blue-light)' : 'var(--bg-secondary)',
+                              color: isCurrent ? 'var(--accent-blue)' : 'var(--text-primary)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {word}
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {dictionaryModal.loading && (
+                <div style={{ padding: '30px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <Loader2 size={24} className="spin" style={{ color: 'var(--accent-blue)' }} />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Searching definition...</span>
+                </div>
+              )}
+
+              {/* Error State */}
+              {dictionaryModal.error && !dictionaryModal.loading && (
+                <div style={{ padding: '14px', borderRadius: 'var(--radius-sm)', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.85rem' }}>
+                  {dictionaryModal.error}
+                </div>
+              )}
+
+              {/* Definition Result */}
+              {dictionaryModal.wordData && !dictionaryModal.loading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Top Word & Audio */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--text-primary)' }}>
+                        {dictionaryModal.wordData.word}
+                      </h4>
+                      {dictionaryModal.wordData.phonetic && (
+                        <span style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                          {dictionaryModal.wordData.phonetic}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handlePlayWordAudio(dictionaryModal.wordData.word, dictionaryModal.wordData.audio)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '100px',
+                        backgroundColor: 'var(--accent-blue-light)',
+                        color: 'var(--accent-blue)',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Volume2 size={16} />
+                      Pronounce
+                    </button>
+                  </div>
+
+                  {/* Theological Insight Banner */}
+                  {dictionaryModal.wordData.biblicalContext && (
+                    <div style={{
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.12) 100%)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 14px',
+                      borderLeft: '4px solid var(--accent-gold)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-gold)', fontWeight: 700, fontSize: '0.75rem', marginBottom: '4px', textTransform: 'uppercase' }}>
+                        <Sparkles size={14} />
+                        Biblical & Theological Root
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>
+                        {dictionaryModal.wordData.biblicalContext}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Meanings */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {dictionaryModal.wordData.meanings?.slice(0, 3).map((m, mIdx) => (
+                      <div key={mIdx}>
+                        <span style={{ fontStyle: 'italic', fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                          {m.partOfSpeech}
+                        </span>
+                        <ul style={{ margin: '4px 0 0', paddingLeft: '18px', fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)' }}>
+                          {m.definitions?.slice(0, 2).map((d, dIdx) => (
+                            <li key={dIdx} style={{ marginBottom: '4px' }}>
+                              {d.definition}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Link to Full Lexicon */}
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', textAlign: 'center' }}>
+                    <a
+                      href={`/dictionary`}
+                      style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      Open Full Biblical Dictionary &rarr;
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

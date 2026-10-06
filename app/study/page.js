@@ -16,7 +16,10 @@ import {
   Layers, 
   ExternalLink, 
   X,
-  Bookmark
+  Bookmark,
+  BookMarked,
+  Calendar,
+  MapPin
 } from 'lucide-react';
 
 const OLD_TESTAMENT_BOOKS = [
@@ -192,8 +195,68 @@ export default function StudyNotesPage() {
             </div>
           </div>
 
+          {/* Quick Study Suite Tools */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginTop: '14px', marginBottom: '14px' }}>
+            <Link
+              href="/dictionary"
+              className="card"
+              style={{
+                padding: '9px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                borderLeft: '3px solid #0284c7'
+              }}
+            >
+              <BookMarked size={16} style={{ color: '#0284c7' }} />
+              <span>Word Lexicon</span>
+            </Link>
+
+            <Link
+              href="/calendar"
+              className="card"
+              style={{
+                padding: '9px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                borderLeft: '3px solid #b45309'
+              }}
+            >
+              <Calendar size={16} style={{ color: '#b45309' }} />
+              <span>Feasts Calendar</span>
+            </Link>
+
+            <Link
+              href="/places"
+              className="card"
+              style={{
+                padding: '9px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                borderLeft: '3px solid #15803d'
+              }}
+            >
+              <MapPin size={16} style={{ color: '#15803d' }} />
+              <span>Sacred Maps</span>
+            </Link>
+          </div>
+
           {/* Navigation Tabs */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => setActiveTab('browse')}
               style={{

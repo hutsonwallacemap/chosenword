@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { dailyVerses, dailyQuizzes } from './data/dailyContent';
-import { Flame, Trophy, BookOpen, Search, Library, Bookmark, GraduationCap, HelpCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Flame, Trophy, BookOpen, Search, Library, Bookmark, GraduationCap, HelpCircle, CheckCircle2, XCircle, BookMarked, Calendar, MapPin } from 'lucide-react';
 
 // Seeded random number generator
 function mulberry32(a) {
@@ -269,8 +269,7 @@ export default function Home() {
             alignItems: 'center',
             gap: '16px',
             textDecoration: 'none',
-            padding: '24px 16px',
-            gridColumn: 'span 2'
+            padding: '24px 16px'
           }}>
             <div style={{
               background: 'var(--accent-purple-light)',
@@ -282,8 +281,73 @@ export default function Home() {
               <GraduationCap size={32} strokeWidth={2} />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Study Notes</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Book guides, chapter insights & teachings</p>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Study Notes</h3>
+            </div>
+          </Link>
+
+          <Link href="/dictionary" className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
+          }}>
+            <div style={{
+              background: 'rgba(56, 189, 248, 0.15)',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: '#0284c7'
+            }}>
+              <BookMarked size={32} strokeWidth={2} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Lexicon</h3>
+            </div>
+          </Link>
+
+          <Link href="/calendar" className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
+          }}>
+            <div style={{
+              background: '#fef3c7',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: '#b45309'
+            }}>
+              <Calendar size={32} strokeWidth={2} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Feasts Calendar</h3>
+            </div>
+          </Link>
+
+          <Link href="/places" className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px'
+          }}>
+            <div style={{
+              background: '#dcfce7',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: '#15803d'
+            }}>
+              <MapPin size={32} strokeWidth={2} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Sacred Maps</h3>
             </div>
           </Link>
         </div>
