@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
 import { bookSummaries } from '../data/bookSummaries';
+import { lookupBiblicalWord } from '../data/biblicalDictionary';
 import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked } from 'lucide-react';
 
 const ALL_BOOKS = [
@@ -493,14 +494,36 @@ export default function BibleReader() {
     const cleanWord = rawWord.toLowerCase().replace(/[^a-z]/g, '').trim();
     if (!cleanWord) return;
 
+    // 1. Instant check in local biblical dictionary (0ms latency, 100% offline-ready)
+    const local = lookupBiblicalWord(cleanWord);
+    if (local) {
+      setDictionaryModal(prev => ({
+        ...prev,
+        selectedWord: cleanWord,
+        searchInput: cleanWord,
+        loading: false,
+        error: '',
+        wordData: {
+          word: local.word,
+          phonetic: local.phonetic,
+          audio: '',
+          meanings: [{ partOfSpeech: local.partOfSpeech, definitions: [{ definition: local.definition }] }],
+          biblicalContext: `${local.origin ? local.origin + ' — ' : ''}${local.biblicalContext}`,
+          keyVerse: local.keyVerse,
+          keyVerseText: local.keyVerseText
+        }
+      }));
+      return;
+    }
+
     setDictionaryModal(prev => ({ ...prev, selectedWord: cleanWord, searchInput: cleanWord, loading: true, error: '', wordData: null }));
     try {
       const res = await fetch(`/api/dictionary?word=${encodeURIComponent(cleanWord)}`);
       const data = await res.json();
-      if (!res.ok || data.error) {
-        setDictionaryModal(prev => ({ ...prev, loading: false, error: data.error || `No definition found for "${cleanWord}".` }));
-      } else {
+      if (res.ok && data) {
         setDictionaryModal(prev => ({ ...prev, loading: false, wordData: data }));
+      } else {
+        setDictionaryModal(prev => ({ ...prev, loading: false, error: data?.error || `No definition found for "${cleanWord}".` }));
       }
     } catch (e) {
       setDictionaryModal(prev => ({ ...prev, loading: false, error: 'Failed to fetch definition.' }));
@@ -1162,18 +1185,22 @@ export default function BibleReader() {
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
             <button 
               onClick={() => {
-                const words = selectedVerse.text.replace(/<[^>]*>?/gm, '').split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
-                const firstWord = words[0] || 'grace';
+                const cleanText = selectedVerse.text.replace(/<[^>]*>?/gm, '');
+                const rawWords = cleanText.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
+                // Prefer rich biblical terms, or words with length >= 4, fallback to first word
+                const keyWord = rawWords.find(w => lookupBiblicalWord(w)) || 
+                                rawWords.find(w => w.length >= 4 && !['that', 'this', 'with', 'from', 'they', 'them', 'then', 'there', 'were', 'have'].includes(w.toLowerCase())) || 
+                                rawWords[0] || 'grace';
                 setDictionaryModal({
                   isOpen: true,
-                  verseText: selectedVerse.text.replace(/<[^>]*>?/gm, ''),
-                  selectedWord: firstWord,
+                  verseText: cleanText,
+                  selectedWord: keyWord,
                   wordData: null,
                   loading: true,
                   error: '',
-                  searchInput: firstWord
+                  searchInput: keyWord
                 });
-                handleLookupWord(firstWord);
+                handleLookupWord(keyWord);
                 setSelectedVerse(null);
               }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)' }}

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { getFeastsWithDynamicDates } from '../data/biblicalCalendar';
 import { 
   Calendar as CalendarIcon, 
   Sparkles, 
@@ -13,49 +14,94 @@ import {
   CheckCircle2, 
   Loader2,
   Bookmark,
-  Share2
+  Share2,
+  Volume2,
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function BiblicalCalendarPage() {
-  const [calendarData, setCalendarData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('seven'); // 'seven', 'all', 'spring', 'fall', 'historical'
+  const [filter, setFilter] = useState('seven'); // 'seven', 'spring', 'fall', 'historical', 'all'
   const [expandedId, setExpandedId] = useState('passover');
+  const [calendarData, setCalendarData] = useState(() => getFeastsWithDynamicDates(new Date()));
+  const [playingShofar, setPlayingShofar] = useState(false);
 
   useEffect(() => {
-    async function loadFeasts() {
-      try {
-        const res = await fetch('/api/calendar');
-        if (res.ok) {
-          const data = await res.json();
-          setCalendarData(data);
-        }
-      } catch (err) {
-        console.error('Failed to load feasts', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadFeasts();
+    // Re-evaluate with client's exact local time
+    setCalendarData(getFeastsWithDynamicDates(new Date()));
   }, []);
 
-  const feasts = calendarData?.feasts || [];
+  const feasts = calendarData.feasts || [];
+  const nextFeast = calendarData.nextFeast || feasts[0];
 
-  const filteredFeasts = feasts.filter(f => {
-    if (filter === 'all') return true;
-    if (filter === 'seven') {
-      return ['passover', 'unleavened_bread', 'firstfruits', 'pentecost', 'trumpets', 'atonement', 'tabernacles'].includes(f.id);
+  const filteredFeasts = useMemo(() => {
+    return feasts.filter(f => {
+      if (filter === 'all') return true;
+      if (filter === 'seven') {
+        return ['passover', 'unleavened_bread', 'firstfruits', 'pentecost', 'trumpets', 'atonement', 'tabernacles'].includes(f.id);
+      }
+      if (filter === 'spring') return f.season === 'spring';
+      if (filter === 'fall') return f.season === 'fall';
+      if (filter === 'historical') return f.season === 'historical' || f.season === 'weekly';
+      return true;
+    });
+  }, [feasts, filter]);
+
+  // Authentic Shofar horn sound synthesized via Web Audio API (zero audio file download needed!)
+  const playShofarBlast = (type = 'tekiah') => {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      setPlayingShofar(true);
+
+      const playTone = (freq, startTime, duration) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        // Authentic brassy ram's horn timbre using sawtooth with gentle lowpass
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, startTime);
+        // Slight pitch rise typical of blowing a horn
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.05, startTime + duration * 0.4);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(850, startTime);
+
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.08);
+        gain.gain.setValueAtTime(0.3, startTime + duration - 0.1);
+        gain.gain.linearRampToValueAtTime(0.001, startTime + duration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const now = ctx.currentTime;
+      const baseFreq = 220; // A3 pitch
+
+      if (type === 'tekiah') {
+        // One long triumphant blast (2.4s)
+        playTone(baseFreq, now, 2.4);
+        setTimeout(() => setPlayingShofar(false), 2500);
+      } else if (type === 'teruah') {
+        // 9 short staccato blasts
+        for (let i = 0; i < 9; i++) {
+          playTone(baseFreq * 1.1, now + (i * 0.18), 0.12);
+        }
+        setTimeout(() => setPlayingShofar(false), 2000);
+      }
+    } catch (e) {
+      console.error('Audio synthesis failed', e);
+      setPlayingShofar(false);
     }
-    if (filter === 'spring') return f.season === 'spring';
-    if (filter === 'fall') return f.season === 'fall';
-    if (filter === 'historical') return f.season === 'historical' || f.season === 'weekly';
-    return true;
-  });
-
-  // Find nearest upcoming feast
-  const upcomingFeast = feasts
-    .filter(f => f.daysUntil !== null && f.daysUntil >= 0)
-    .sort((a, b) => a.daysUntil - b.daysUntil)[0] || feasts[0];
+  };
 
   return (
     <div style={{ maxWidth: '880px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -77,16 +123,16 @@ export default function BiblicalCalendarPage() {
               Biblical Feasts & Holy Days
             </h1>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              The Moedim (Appointed Times) of the Lord, biblical timeline, and prophetic fulfillment in Christ
+              The Moedim (Appointed Times) of the Lord, biblical calendar, and prophetic fulfillment in Christ
             </p>
           </div>
         </div>
       </div>
 
-      {/* Featured Upcoming Feast Card */}
-      {upcomingFeast && (
+      {/* Featured Next Upcoming Feast Hero Card */}
+      {nextFeast && (
         <div style={{
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           borderRadius: 'var(--radius-lg)',
           padding: '24px 28px',
           color: 'white',
@@ -96,11 +142,11 @@ export default function BiblicalCalendarPage() {
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <span style={{ 
-                  background: 'rgba(245, 158, 11, 0.2)', 
+                  background: 'rgba(245, 158, 11, 0.25)', 
                   color: '#fbbf24', 
                   fontSize: '0.75rem', 
                   fontWeight: 700, 
@@ -111,46 +157,82 @@ export default function BiblicalCalendarPage() {
                 }}>
                   Next Appointed Season
                 </span>
-                {upcomingFeast.daysUntil !== null && (
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    {upcomingFeast.daysUntil === 0 ? 'Today!' : upcomingFeast.daysUntil > 0 ? `In ${upcomingFeast.daysUntil} days` : ''}
+                
+                {nextFeast.daysUntil !== null && (
+                  <span style={{ 
+                    fontSize: '0.82rem', 
+                    fontWeight: 700,
+                    color: nextFeast.daysUntil <= 7 ? '#4ade80' : '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Clock size={14} />
+                    {nextFeast.daysUntil === 0 ? 'Today!' : nextFeast.daysUntil === 1 ? 'Tomorrow!' : `In ${nextFeast.daysUntil} days`}
                   </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
-                  {upcomingFeast.name}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                  {nextFeast.name}
                 </h2>
-                <span style={{ fontSize: '1.4rem', fontFamily: 'serif', color: '#fde68a' }}>
-                  {upcomingFeast.hebrewName}
+                <span style={{ fontSize: '1.5rem', fontFamily: 'serif', color: '#fde68a' }}>
+                  {nextFeast.hebrewName}
+                </span>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                  ({nextFeast.transliteration})
                 </span>
               </div>
               
-              <p style={{ color: '#cbd5e1', fontSize: '0.9rem', margin: '6px 0 0', maxWidth: '580px' }}>
-                {upcomingFeast.biblicalTiming} • {upcomingFeast.gregorianDate || 'Annual Observance'}
+              <p style={{ color: '#cbd5e1', fontSize: '0.9rem', margin: '8px 0 0', maxWidth: '580px' }}>
+                {nextFeast.biblicalTiming} &bull; <strong style={{ color: '#fef08a' }}>{nextFeast.gregorianDate}</strong>
               </p>
             </div>
 
-            <Link
-              href={`/bible?book=${encodeURIComponent(upcomingFeast.primaryBook)}&chapter=${upcomingFeast.primaryChapter}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 18px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--accent-gold-grad)',
-                color: '#1e293b',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textDecoration: 'none',
-                boxShadow: '0 2px 10px rgba(245, 158, 11, 0.3)'
-              }}
-            >
-              <BookOpen size={16} />
-              Read in {upcomingFeast.primaryBook} {upcomingFeast.primaryChapter}
-            </Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Link
+                href={`/bible?book=${encodeURIComponent(nextFeast.primaryBook)}&chapter=${nextFeast.primaryChapter}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--accent-gold-grad)',
+                  color: '#1e293b',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 10px rgba(245, 158, 11, 0.3)'
+                }}
+              >
+                <BookOpen size={16} />
+                <span>Read in {nextFeast.primaryBook} {nextFeast.primaryChapter}</span>
+              </Link>
+
+              {/* Shofar sound blast button */}
+              <button
+                onClick={() => playShofarBlast('tekiah')}
+                disabled={playingShofar}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <Volume2 size={16} style={{ color: '#fbbf24' }} />
+                <span>{playingShofar ? 'Blowing Shofar...' : 'Sound the Shofar'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -186,16 +268,6 @@ export default function BiblicalCalendarPage() {
         ))}
       </div>
 
-      {/* Loading state */}
-      {loading && (
-        <div className="card" style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <Loader2 size={32} className="spin" style={{ color: 'var(--accent-blue)' }} />
-          <p style={{ color: 'var(--text-secondary)', margin: 0, fontWeight: 500 }}>
-            Calculating biblical feast dates & prophetic scriptures...
-          </p>
-        </div>
-      )}
-
       {/* Feasts List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {filteredFeasts.map((feast) => {
@@ -220,7 +292,7 @@ export default function BiblicalCalendarPage() {
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', flexWrap: 'wrap', gap: '12px' }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                       {feast.name}
                     </h3>
@@ -232,13 +304,23 @@ export default function BiblicalCalendarPage() {
                     </span>
                   </div>
                   
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     <span>{feast.biblicalTiming}</span>
-                    {feast.gregorianDate && (
-                      <>
-                        <span>•</span>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{feast.gregorianDate}</span>
-                      </>
+                    <span>&bull;</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {feast.gregorianDate}
+                    </span>
+                    {feast.daysUntil !== null && (
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        padding: '1px 8px', 
+                        borderRadius: '100px',
+                        backgroundColor: feast.daysUntil <= 14 ? 'var(--accent-blue-light)' : 'var(--bg-secondary)',
+                        color: feast.daysUntil <= 14 ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontWeight: 600
+                      }}>
+                        {feast.daysUntil === 0 ? 'Today' : `In ${feast.daysUntil}d`}
+                      </span>
                     )}
                   </div>
                 </div>

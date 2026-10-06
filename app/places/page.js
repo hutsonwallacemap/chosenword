@@ -1,7 +1,8 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { biblicalPlaces } from '../data/biblicalPlaces';
+import 'leaflet/dist/leaflet.css';
 import { 
   MapPin, 
   Search, 
@@ -13,13 +14,18 @@ import {
   ChevronRight,
   Sparkles,
   Map as MapIcon,
-  X
+  X,
+  Maximize2
 } from 'lucide-react';
 
 export default function BiblicalPlacesPage() {
   const [selectedPlaceId, setSelectedPlaceId] = useState('jerusalem');
   const [searchQuery, setSearchQuery] = useState('');
   const [testamentFilter, setTestamentFilter] = useState('all'); // 'all', 'ot', 'nt'
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef({});
 
   const filteredPlaces = useMemo(() => {
     return biblicalPlaces.filter(place => {
@@ -42,16 +48,108 @@ export default function BiblicalPlacesPage() {
     return biblicalPlaces.find(p => p.id === selectedPlaceId) || biblicalPlaces[0];
   }, [selectedPlaceId]);
 
-  // Compute OpenStreetMap embed URL with bounding box around coordinates
-  const mapEmbedUrl = useMemo(() => {
-    if (!selectedPlace) return '';
-    const delta = 0.08; // bounding box buffer
-    const minLon = (selectedPlace.lng - delta).toFixed(4);
-    const minLat = (selectedPlace.lat - delta).toFixed(4);
-    const maxLon = (selectedPlace.lng + delta).toFixed(4);
-    const maxLat = (selectedPlace.lat + delta).toFixed(4);
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${minLon}%2C${minLat}%2C${maxLon}%2C${maxLat}&layer=mapnik&marker=${selectedPlace.lat}%2C${selectedPlace.lng}`;
-  }, [selectedPlace]);
+  // Initialize and update Leaflet Map
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function initOrUpdateMap() {
+      if (typeof window === 'undefined') return;
+
+      const container = document.getElementById('biblical-interactive-map');
+      if (!container) return;
+
+      const L = (await import('leaflet')).default;
+      if (isCancelled) return;
+
+      if (!mapInstanceRef.current) {
+        // Create Leaflet instance
+        const map = L.map('biblical-interactive-map', {
+          center: [selectedPlace.lat, selectedPlace.lng],
+          zoom: selectedPlace.zoom || 13,
+          zoomControl: true,
+          scrollWheelZoom: true
+        });
+        mapInstanceRef.current = map;
+
+        // OpenStreetMap raster tiles (Zero API key required, permitted in CSP)
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // Add pins for all places
+        biblicalPlaces.forEach(p => {
+          const isSelected = p.id === selectedPlace.id;
+          const marker = L.circleMarker([p.lat, p.lng], {
+            radius: isSelected ? 12 : 7,
+            fillColor: isSelected ? '#f59e0b' : '#3b82f6',
+            color: '#ffffff',
+            weight: isSelected ? 3 : 2,
+            opacity: 1,
+            fillOpacity: 0.95
+          }).addTo(map);
+
+          marker.bindTooltip(`<strong>${p.name}</strong><br/>${p.region}`, {
+            direction: 'top',
+            offset: [0, -8]
+          });
+
+          marker.on('click', () => {
+            setSelectedPlaceId(p.id);
+          });
+
+          markersRef.current[p.id] = marker;
+        });
+
+        setMapLoaded(true);
+      } else {
+        const map = mapInstanceRef.current;
+        
+        // Smoothly fly to selected place
+        map.flyTo([selectedPlace.lat, selectedPlace.lng], selectedPlace.zoom || 13, {
+          duration: 1.2
+        });
+
+        // Highlight selected pin
+        biblicalPlaces.forEach(p => {
+          const marker = markersRef.current[p.id];
+          if (marker) {
+            const isSelected = p.id === selectedPlace.id;
+            marker.setStyle({
+              radius: isSelected ? 12 : 7,
+              fillColor: isSelected ? '#f59e0b' : '#3b82f6',
+              weight: isSelected ? 3 : 2
+            });
+            if (isSelected) {
+              marker.bringToFront();
+            }
+          }
+        });
+      }
+    }
+
+    initOrUpdateMap();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedPlaceId]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleRecenter = () => {
+    if (mapInstanceRef.current && selectedPlace) {
+      mapInstanceRef.current.setView([selectedPlace.lat, selectedPlace.lng], selectedPlace.zoom || 13);
+    }
+  };
 
   return (
     <div style={{ maxWidth: '1080px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -133,7 +231,7 @@ export default function BiblicalPlacesPage() {
             {/* Filter Pills */}
             <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
               {[
-                { id: 'all', label: 'All (21)' },
+                { id: 'all', label: `All (${biblicalPlaces.length})` },
                 { id: 'ot', label: 'Old Testament' },
                 { id: 'nt', label: 'New Testament' }
               ].map(f => (
@@ -187,7 +285,7 @@ export default function BiblicalPlacesPage() {
                     style={{
                       padding: '14px 16px',
                       cursor: 'pointer',
-                      borderLeft: isSelected ? '4px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                      borderLeft: isSelected ? '4px solid var(--accent-gold)' : '1px solid var(--border-color)',
                       backgroundColor: isSelected ? 'var(--bg-card)' : 'var(--bg-card)',
                       boxShadow: isSelected ? 'var(--shadow-md)' : 'none',
                       transition: 'all 0.15s ease',
@@ -198,7 +296,7 @@ export default function BiblicalPlacesPage() {
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isSelected ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isSelected ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
                           {p.name}
                         </h4>
                         <span style={{ 
@@ -218,7 +316,7 @@ export default function BiblicalPlacesPage() {
                       </p>
                     </div>
 
-                    <ChevronRight size={18} style={{ color: isSelected ? 'var(--accent-blue)' : 'var(--text-secondary)' }} />
+                    <ChevronRight size={18} style={{ color: isSelected ? 'var(--accent-gold)' : 'var(--text-secondary)' }} />
                   </div>
                 );
               })
@@ -227,25 +325,18 @@ export default function BiblicalPlacesPage() {
 
         </div>
 
-        {/* Right Column: Interactive Map & Place Deep Dive */}
+        {/* Right Column: Native Interactive Leaflet Map & Deep Dive */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Interactive OpenStreetMap Frame */}
+          {/* Interactive Leaflet Map Container (NO IFRAME, 100% RELIABLE) */}
           <div className="card" style={{ padding: '0', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ position: 'relative', width: '100%', height: '320px', background: 'var(--bg-secondary)' }}>
-              {mapEmbedUrl ? (
-                <iframe
-                  title={`Map of ${selectedPlace.name}`}
-                  src={mapEmbedUrl}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                />
-              ) : null}
+            <div style={{ position: 'relative', width: '100%', height: '360px', background: '#e2e8f0' }}>
+              <div 
+                id="biblical-interactive-map" 
+                style={{ width: '100%', height: '100%', zIndex: 1 }}
+              />
 
-              {/* Coordinates Overlay Badge */}
+              {/* Coordinates Badge */}
               <div style={{
                 position: 'absolute',
                 top: '12px',
@@ -259,17 +350,17 @@ export default function BiblicalPlacesPage() {
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                zIndex: 10
               }}>
                 <Compass size={14} style={{ color: '#38bdf8' }} />
                 <span>{selectedPlace.lat.toFixed(4)}°N, {selectedPlace.lng.toFixed(4)}°E</span>
               </div>
 
-              {/* External OSM link */}
-              <a
-                href={`https://www.openstreetmap.org/?mlat=${selectedPlace.lat}&mlon=${selectedPlace.lng}#map=13/${selectedPlace.lat}/${selectedPlace.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Recenter Button */}
+              <button
+                onClick={handleRecenter}
+                title="Recenter on selected place"
                 style={{
                   position: 'absolute',
                   top: '12px',
@@ -277,6 +368,7 @@ export default function BiblicalPlacesPage() {
                   background: 'rgba(15, 23, 42, 0.85)',
                   backdropFilter: 'blur(4px)',
                   color: 'white',
+                  border: 'none',
                   padding: '6px 12px',
                   borderRadius: '100px',
                   fontSize: '0.75rem',
@@ -284,12 +376,13 @@ export default function BiblicalPlacesPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  textDecoration: 'none'
+                  cursor: 'pointer',
+                  zIndex: 10
                 }}
               >
-                <span>View Full Map</span>
-                <ExternalLink size={12} />
-              </a>
+                <Navigation size={12} style={{ color: '#fbbf24' }} />
+                <span>Focus {selectedPlace.name}</span>
+              </button>
             </div>
           </div>
 

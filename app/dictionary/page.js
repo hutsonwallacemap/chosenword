@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { lookupBiblicalWord } from '../data/biblicalDictionary';
 import { 
   BookMarked, 
   Search, 
@@ -13,52 +14,82 @@ import {
   GraduationCap,
   Layers,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  Quote
 } from 'lucide-react';
 
 const SUGGESTED_TERMS = [
   "grace", "faith", "covenant", "righteousness", "atonement", 
   "redemption", "salvation", "repentance", "holiness", "mercy", 
-  "gospel", "propitiation", "justification", "sanctification", 
-  "messiah", "shalom", "selah", "agape", "trinity", "resurrection"
+  "propitiation", "justification", "sanctification", "messiah", 
+  "shalom", "selah", "agape", "trinity", "yahweh", "resurrection"
 ];
 
 export default function DictionaryPage() {
   const [searchTerm, setSearchTerm] = useState('grace');
   const [currentResult, setCurrentResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [audioPlaying, setAudioPlaying] = useState(false);
 
   const fetchDefinition = async (wordToSearch) => {
-    const word = (wordToSearch || searchTerm).trim();
+    const word = (wordToSearch || searchTerm || 'grace').trim();
     if (!word) return;
 
     setLoading(true);
-    setError('');
-    
+
+    // 1. Instant local lookup check
+    const local = lookupBiblicalWord(word);
+    if (local) {
+      setCurrentResult({
+        word: local.word,
+        phonetic: local.phonetic,
+        audio: '',
+        meanings: [
+          {
+            partOfSpeech: local.partOfSpeech,
+            definitions: [{ definition: local.definition }]
+          }
+        ],
+        biblicalContext: `${local.origin ? local.origin + ' — ' : ''}${local.biblicalContext}`,
+        keyVerse: local.keyVerse,
+        keyVerseText: local.keyVerseText,
+        source: 'local'
+      });
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fetch from API route (which handles online & fallbacks)
     try {
       const res = await fetch(`/api/dictionary?word=${encodeURIComponent(word)}`);
       const data = await res.json();
-
-      if (!res.ok || data.error) {
-        setError(data.error || `No definition found for "${word}".`);
-        setCurrentResult(null);
-      } else {
+      if (res.ok && data) {
         setCurrentResult(data);
-        setError('');
+      } else {
+        // Fallback card
+        setCurrentResult({
+          word: word,
+          phonetic: `/${word}/`,
+          meanings: [{ partOfSpeech: 'term', definitions: [{ definition: `Biblical word or reference.` }] }],
+          biblicalContext: `Search all occurrences of "${word}" in the scriptures.`,
+          searchLink: `/search?q=${encodeURIComponent(word)}`
+        });
       }
     } catch (err) {
-      console.error('Dictionary search failed', err);
-      setError('Unable to load word definition. Please check your network connection.');
-      setCurrentResult(null);
+      // Offline fallback
+      setCurrentResult({
+        word: word,
+        phonetic: `/${word}/`,
+        meanings: [{ partOfSpeech: 'term', definitions: [{ definition: `Definition unavailable while offline.` }] }],
+        biblicalContext: `You can search "${word}" in the offline Bible reader.`,
+        searchLink: `/search?q=${encodeURIComponent(word)}`
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Initial fetch on mount
     fetchDefinition('grace');
   }, []);
 
@@ -70,34 +101,11 @@ export default function DictionaryPage() {
   const handlePlayAudio = () => {
     if (!currentResult) return;
 
-    // 1. Try audio URL from API if available
-    if (currentResult.audio) {
-      try {
-        const audio = new Audio(currentResult.audio);
-        setAudioPlaying(true);
-        audio.play()
-          .then(() => {
-            audio.onended = () => setAudioPlaying(false);
-          })
-          .catch(() => {
-            playSpeechSynthesis(currentResult.word);
-          });
-        return;
-      } catch (e) {
-        // Fallback to speechSynthesis
-      }
-    }
-
-    // 2. Fallback to Web Speech API
-    playSpeechSynthesis(currentResult.word);
-  };
-
-  const playSpeechSynthesis = (text) => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(currentResult.word);
       utterance.lang = 'en-US';
-      utterance.rate = 0.9;
+      utterance.rate = 0.85;
       setAudioPlaying(true);
       utterance.onend = () => setAudioPlaying(false);
       utterance.onerror = () => setAudioPlaying(false);
@@ -143,7 +151,7 @@ export default function DictionaryPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search any biblical word (e.g., grace, covenant, selah)..."
+              placeholder="Search any biblical word (e.g., grace, covenant, selah, begat)..."
               style={{
                 width: '100%',
                 padding: '12px 14px 12px 42px',
@@ -202,7 +210,7 @@ export default function DictionaryPage() {
         {/* Suggested Biblical Term Chips */}
         <div style={{ marginTop: '16px' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '8px', letterSpacing: '0.5px' }}>
-            Popular Biblical Terms
+            Popular Biblical & Theological Terms
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {SUGGESTED_TERMS.map((term) => (
@@ -236,38 +244,6 @@ export default function DictionaryPage() {
           <p style={{ color: 'var(--text-secondary)', margin: 0, fontWeight: 500 }}>
             Searching biblical lexicon and dictionary...
           </p>
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && !loading && (
-        <div className="card" style={{ padding: '32px 20px', textAlign: 'center', borderLeft: '4px solid #ef4444' }}>
-          <HelpCircle size={32} style={{ color: '#ef4444', margin: '0 auto 12px' }} />
-          <h3 style={{ margin: '0 0 6px', color: 'var(--text-primary)' }}>Word Not Found</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', margin: '0 auto 16px' }}>
-            {error}
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-            <Link
-              href={`/search?q=${encodeURIComponent(searchTerm)}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                textDecoration: 'none'
-              }}
-            >
-              <Search size={16} />
-              Search &quot;{searchTerm}&quot; in Bible Text
-            </Link>
-          </div>
         </div>
       )}
 
@@ -307,7 +283,7 @@ export default function DictionaryPage() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <Volume2 size={18} className={audioPlaying ? 'pulse' : ''} />
+                <Volume2 size={18} />
                 <span>{audioPlaying ? 'Speaking...' : 'Pronounce'}</span>
               </button>
 
@@ -349,6 +325,36 @@ export default function DictionaryPage() {
               <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.6, color: 'var(--text-primary)', fontWeight: 500 }}>
                 {currentResult.biblicalContext}
               </p>
+            </div>
+          )}
+
+          {/* Key Verse Highlight */}
+          {currentResult.keyVerse && (
+            <div style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, color: 'var(--accent-blue)', fontSize: '0.85rem' }}>
+                  Key Reference: {currentResult.keyVerse}
+                </span>
+                <Link 
+                  href={`/search?q=${encodeURIComponent(currentResult.word)}`}
+                  style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textDecoration: 'none' }}
+                >
+                  View more &rarr;
+                </Link>
+              </div>
+              {currentResult.keyVerseText && (
+                <p style={{ margin: 0, fontSize: '0.95rem', fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  &ldquo;{currentResult.keyVerseText}&rdquo;
+                </p>
+              )}
             </div>
           )}
 
