@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { dailyVerses, dailyQuizzes } from './data/dailyContent';
-import { Flame, Trophy, BookOpen, Search, Library, Bookmark, HelpCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Flame, Trophy, BookOpen, Search, Library, Bookmark, GraduationCap, HelpCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 // Seeded random number generator
 function mulberry32(a) {
@@ -261,6 +261,30 @@ export default function Home() {
               <Bookmark size={32} strokeWidth={2} />
             </div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>Saved</h3>
+          </Link>
+
+          <Link href="/study" className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textDecoration: 'none',
+            padding: '24px 16px',
+            gridColumn: 'span 2'
+          }}>
+            <div style={{
+              background: 'var(--accent-purple-light)',
+              padding: '16px',
+              borderRadius: '16px',
+              display: 'flex',
+              color: 'var(--accent-purple)'
+            }}>
+              <GraduationCap size={32} strokeWidth={2} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Study Notes</h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Book guides, chapter insights & teachings</p>
+            </div>
           </Link>
         </div>
       </div>

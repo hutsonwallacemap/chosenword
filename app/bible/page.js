@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
-import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight } from 'lucide-react';
+import { bookSummaries } from '../data/bookSummaries';
+import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap } from 'lucide-react';
 
 const ALL_BOOKS = [
   "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
@@ -123,6 +124,15 @@ export default function BibleReader() {
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // Study summary and chapter notes state
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
+  const [showBookIntro, setShowBookIntro] = useState(false);
+  const [showThemesNotes, setShowThemesNotes] = useState(false);
+  const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [chapterNotes, setChapterNotes] = useState({});
+  const [chapterNoteText, setChapterNoteText] = useState('');
+  const [isNoteSaved, setIsNoteSaved] = useState(false);
+
   useEffect(() => {
     return () => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -135,7 +145,54 @@ export default function BibleReader() {
     setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
     setBookmarkedChapters(JSON.parse(localStorage.getItem('cw_bookmarks')) || []);
     setVerseNotes(JSON.parse(localStorage.getItem('cw_notes')) || {});
+
+    // Check URL query parameters on initial load
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlBook = params.get('book');
+      const urlChapter = params.get('chapter');
+      if (urlBook && ALL_BOOKS.includes(urlBook)) {
+        setBook(urlBook);
+        if (urlChapter && !isNaN(parseInt(urlChapter))) {
+          const max = CHAPTER_COUNTS[urlBook] || 1;
+          const parsed = Math.max(1, Math.min(max, parseInt(urlChapter)));
+          setChapter(parsed);
+        }
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    // Sync personal chapter note and intro state when book or chapter changes
+    try {
+      const storedNotes = JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}');
+      setChapterNotes(storedNotes);
+      const currentNote = storedNotes[`${book} ${chapter}`] || '';
+      setChapterNoteText(currentNote);
+      setShowNoteEditor(!!currentNote);
+      setShowBookIntro(parseInt(chapter) === 1);
+    } catch (e) {
+      console.error('Error loading chapter notes', e);
+    }
+  }, [book, chapter]);
+
+  const handleSaveChapterNote = () => {
+    try {
+      const updated = { ...chapterNotes };
+      const ref = `${book} ${chapter}`;
+      if (chapterNoteText.trim()) {
+        updated[ref] = chapterNoteText.trim();
+      } else {
+        delete updated[ref];
+      }
+      setChapterNotes(updated);
+      localStorage.setItem('cw_chapter_notes', JSON.stringify(updated));
+      setIsNoteSaved(true);
+      setTimeout(() => setIsNoteSaved(false), 2000);
+    } catch (e) {
+      console.error('Error saving chapter note', e);
+    }
+  };
 
   useEffect(() => {
     async function fetchChapter() {
@@ -601,10 +658,303 @@ export default function BibleReader() {
       
       {!loading && !error && (
         <div className="card" style={{ padding: '40px 24px', backgroundColor: 'var(--bg-primary)', border: 'none', boxShadow: 'none' }}>
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '40px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '32px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
             {book} {chapter}
           </h2>
-          
+
+          {/* Inline Book & Chapter Study Card */}
+          {bookSummaries[book] && (
+            <div className="chapter-summary-bar" style={{ marginBottom: '36px' }}>
+              {/* Header / Toggle Row */}
+              <div 
+                onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: 'var(--accent-blue-light)',
+                    color: 'var(--accent-blue)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <BookOpen size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Study Insights
+                      </span>
+                      <span className="badge badge-blue">
+                        {book} {chapter}
+                      </span>
+                      {chapterNotes[`${book} ${chapter}`] && (
+                        <span className="badge badge-gold" title="Has personal note">
+                          Note Added
+                        </span>
+                      )}
+                    </div>
+                    {!isSummaryExpanded && bookSummaries[book].chapters?.[chapter] && (
+                      <p style={{ 
+                        fontSize: '0.8rem', 
+                        color: 'var(--text-secondary)', 
+                        margin: '2px 0 0 0',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '280px'
+                      }}>
+                        {bookSummaries[book].chapters[chapter]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}>
+                  <span>{isSummaryExpanded ? 'Collapse' : 'Insights'}</span>
+                  {isSummaryExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </div>
+              </div>
+
+              {/* Expanded Content */}
+              {isSummaryExpanded && (
+                <div className="fade-in" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  
+                  {/* Chapter Summary */}
+                  {bookSummaries[book].chapters?.[chapter] && (
+                    <div style={{
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-secondary)',
+                      borderLeft: '3px solid var(--accent-blue)'
+                    }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                        Chapter Overview
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>
+                        {bookSummaries[book].chapters[chapter]}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Book Introduction (Open on Ch 1, toggleable on other chapters) */}
+                  <div>
+                    {parseInt(chapter) !== 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setShowBookIntro(!showBookIntro); }}
+                        style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: 'var(--text-secondary)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 0',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Sparkles size={14} style={{ color: 'var(--accent-gold)' }} />
+                        <span>{showBookIntro ? 'Hide' : 'Show'} Book Introduction ({book})</span>
+                        {showBookIntro ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    )}
+
+                    {(parseInt(chapter) === 1 || showBookIntro) && (
+                      <div style={{
+                        marginTop: parseInt(chapter) === 1 ? '0' : '8px',
+                        padding: '14px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+                              Book Introduction
+                            </span>
+                            <h4 style={{ margin: '2px 0 0', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {book}
+                            </h4>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {bookSummaries[book].author && (
+                              <span className="badge badge-purple" style={{ textTransform: 'none' }}>
+                                Author: {bookSummaries[book].author}
+                              </span>
+                            )}
+                            {bookSummaries[book].writtenTo && (
+                              <span className="badge badge-blue" style={{ textTransform: 'none' }}>
+                                Audience: {bookSummaries[book].writtenTo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          {bookSummaries[book].summary}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Key Themes & Important Notes Accordion */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setShowThemesNotes(!showThemesNotes); }}
+                      style={{
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: 'var(--accent-blue)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 0',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <GraduationCap size={15} />
+                      <span>{showThemesNotes ? 'Hide' : 'View'} Key Themes & Teaching Points</span>
+                      {showThemesNotes ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+
+                    {showThemesNotes && (
+                      <div className="fade-in" style={{
+                        marginTop: '10px',
+                        padding: '14px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '14px'
+                      }}>
+                        {/* Key Themes */}
+                        {bookSummaries[book].keyThemes && bookSummaries[book].keyThemes.length > 0 && (
+                          <div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                              Major Themes
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {bookSummaries[book].keyThemes.map((theme, i) => (
+                                <span key={i} className="theme-tag">
+                                  {theme}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Important Notes */}
+                        {bookSummaries[book].importantNotes && bookSummaries[book].importantNotes.length > 0 && (
+                          <div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                              Key Teaching Points
+                            </span>
+                            <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {bookSummaries[book].importantNotes.map((note, idx) => (
+                                <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                                  {note}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Personal Chapter Note Editor */}
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setShowNoteEditor(!showNoteEditor); }}
+                        style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: chapterNotes[`${book} ${chapter}`] ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Edit3 size={15} />
+                        <span>
+                          {chapterNotes[`${book} ${chapter}`] ? 'My Chapter Note' : 'Add Personal Chapter Note'}
+                        </span>
+                        {showNoteEditor ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+
+                      {chapterNotes[`${book} ${chapter}`] && !showNoteEditor && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                          Click to edit
+                        </span>
+                      )}
+                    </div>
+
+                    {showNoteEditor && (
+                      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <textarea
+                          className="note-editor"
+                          rows={3}
+                          value={chapterNoteText}
+                          onChange={(e) => setChapterNoteText(e.target.value)}
+                          placeholder={`Write your personal study reflection or insights for ${book} ${chapter}...`}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                          {isNoteSaved && (
+                            <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Check size={14} /> Saved
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleSaveChapterNote}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--accent-blue)',
+                              color: 'white',
+                              fontSize: '0.82rem',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Save Note
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {verses.map(v => (
               <div key={v.verseNum} style={{ position: 'relative', paddingLeft: '24px' }}>

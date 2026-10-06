@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Bookmark, Settings } from 'lucide-react';
+import { Home, BookOpen, GraduationCap, Bookmark, Settings } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -9,6 +9,7 @@ export default function BottomNav() {
   const navItems = [
     { name: 'Home', path: '/', Icon: Home },
     { name: 'Bible', path: '/bible', Icon: BookOpen },
+    { name: 'Study', path: '/study', Icon: GraduationCap },
     { name: 'Saved', path: '/saved', Icon: Bookmark },
     { name: 'Settings', path: '/settings', Icon: Settings },
   ];
@@ -37,12 +38,12 @@ export default function BottomNav() {
             textDecoration: 'none',
             fontSize: '0.75rem',
             fontWeight: isActive ? 600 : 500,
-            gap: '4px',
+            gap: '3px',
             transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            minWidth: '64px',
+            minWidth: '52px',
           }}>
             <div style={{
-              padding: '6px 16px',
+              padding: '4px 12px',
               borderRadius: '20px',
               backgroundColor: isActive ? 'var(--accent-blue-light)' : 'transparent',
               transition: 'background-color 0.3s ease',

@@ -262,3 +262,131 @@ html.font-xlarge {
     border-radius: 0;
   }
 }
+
+/* =========================================
+   Study Notes & Chapter Summaries Styling
+   ========================================= */
+
+.study-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.study-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-blue-grad);
+  opacity: 0.8;
+}
+
+.study-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.theme-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-blue-light);
+  color: var(--accent-blue);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.theme-tag:hover {
+  transform: scale(1.04);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.theme-tag.gold {
+  background: var(--accent-gold-light);
+  color: var(--accent-gold);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.chapter-summary-bar {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.chapter-summary-bar:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.note-editor {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.note-editor:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-light);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-blue {
+  background: var(--accent-blue-light);
+  color: var(--accent-blue);
+}
+
+.badge-gold {
+  background: var(--accent-gold-light);
+  color: var(--accent-gold);
+}
+
+.badge-purple {
+  background: var(--accent-purple-light);
+  color: var(--accent-purple);
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
