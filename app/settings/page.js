@@ -331,7 +331,7 @@ export default function SettingsPage() {
               borderRadius: 'var(--radius-sm)',
               background: 'none',
               border: '1px solid rgba(239, 68, 68, 0.5)',
-              color: '#ef4444',
+              color: 'var(--danger)',
               fontSize: '0.85rem',
               fontWeight: 600,
               display: 'inline-flex',

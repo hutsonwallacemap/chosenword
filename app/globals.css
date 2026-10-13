@@ -6,22 +6,28 @@
   
   /* Text Colors */
   --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
   
   /* Accent Colors */
   --accent-gold: #f59e0b;
   --accent-gold-light: #fef3c7;
   --accent-gold-grad: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  /* Gold that is readable as small text (4.5:1); --accent-gold is for fills and large text */
+  --accent-gold-text: #b45309;
   
-  --accent-blue: #3b82f6;
+  --accent-blue: #2563eb;
+  /* Background for blue buttons with white text (5.2:1 in both themes) */
+  --accent-blue-fill: #2563eb;
   --accent-blue-light: #eff6ff;
-  --accent-blue-grad: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --accent-blue-grad: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   
-  --accent-purple: #8b5cf6;
+  --accent-purple: #7c3aed;
   --accent-purple-light: #f5f3ff;
   --accent-purple-grad: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   
+  --danger: #dc2626;
+
   /* UI Elements */
   --border-color: #e2e8f0;
   
@@ -47,19 +53,22 @@
   
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
+  --text-tertiary: #8b9bb4;
   
   --accent-gold: #fbbf24;
+  --accent-gold-text: #fbbf24;
   --accent-gold-light: rgba(245, 158, 11, 0.15);
   --accent-gold-grad: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   
   --accent-blue: #60a5fa;
   --accent-blue-light: rgba(59, 130, 246, 0.15);
-  --accent-blue-grad: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  --accent-blue-grad: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --accent-blue-fill: #2563eb;
   
   --accent-purple: #a78bfa;
   --accent-purple-light: rgba(139, 92, 246, 0.15);
   
+  --danger: #f87171;
   --border-color: #334155;
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -441,4 +450,62 @@ mark.search-hit {
   color: inherit;
   border-radius: 3px;
   padding: 0 2px;
+}
+
+/* ---------- Accessibility & touch (UI/UX review) ---------- */
+
+/* Visible keyboard focus everywhere, including inputs that set outline: none inline.
+   :focus-visible keeps mouse and touch clicks free of the ring. */
+:focus-visible {
+  outline: 2px solid var(--accent-blue) !important;
+  outline-offset: 2px;
+}
+
+/* Round icon-only buttons with a 44px minimum tap target */
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.icon-btn:hover {
+  color: var(--text-primary);
+}
+.icon-btn:active {
+  background-color: var(--border-color);
+}
+
+/* Leaflet zoom buttons are 30px by default. leaflet.css loads after this file,
+   so these need !important to win. */
+.leaflet-container .leaflet-bar a {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+}
+
+/* Respect the system setting to reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Red-letter edition: words of Jesus (KJV / KJV PCE) */
+.words-of-christ {
+  color: #b91c1c;
+}
+.dark-theme .words-of-christ {
+  color: #f87171;
 }

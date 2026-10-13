@@ -148,7 +148,8 @@ export default function Home() {
 
       {/* Hero Verse of the Day Card */}
       <div style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.8)), url(https://picsum.photos/seed/${dailyData.day}/800/600)`,
+        // Brand gradient instead of a random stock photo: works offline and keeps text contrast steady
+        backgroundImage: 'radial-gradient(circle at 18% 12%, rgba(251, 191, 36, 0.38), transparent 46%), radial-gradient(circle at 88% 92%, rgba(234, 88, 12, 0.35), transparent 50%), linear-gradient(160deg, #1e293b 0%, #0f172a 100%)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         borderRadius: 'var(--radius-lg)',

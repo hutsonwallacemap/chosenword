@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
 import { bookSummaries } from '../data/bookSummaries';
 import { lookupBiblicalWord } from '../data/biblicalDictionary';
 import { ALL_BOOKS, CHAPTER_COUNTS, normalizeBookName } from '../data/books';
+import { renderRedLetter, stripRedLetterMarks } from '../lib/verseText';
 import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked } from 'lucide-react';
 
 // Helper: generate all possible name variants for a book
@@ -50,6 +51,42 @@ const findBookInData = (booksList, bookName) => {
   return booksList.find(b => b && b.name && lowerVariants.includes(b.name.toLowerCase())) || null;
 };
 
+// Finds one verse's text in any of the translation file formats, or '' if it isn't there
+const findVerseText = (data, book, chapter, verseNum) => {
+  const chapterStr = chapter.toString();
+  const verseStr = verseNum.toString();
+  const variants = getBookNameVariants(book);
+  const clean = (text) => (text || '').replace(/<[^>]*>?/gm, '');
+
+  // Flat verses array (e.g. kjv.json, net.json)
+  if (data.verses && Array.isArray(data.verses)) {
+    const v = data.verses.find(v =>
+      variants.includes(v.book_name) && v.chapter.toString() === chapterStr && v.verse.toString() === verseStr
+    );
+    return clean(v?.text);
+  }
+
+  // Books array (e.g. AKJV.json, BBE.json) or a root array of books
+  const booksList = data.books && Array.isArray(data.books) ? data.books : Array.isArray(data) ? data : null;
+  if (booksList) {
+    const bookData = findBookInData(booksList, book);
+    const chapterData = (bookData?.chapters || []).find(c =>
+      (c.chapter || c.name || '').toString() === chapterStr || c.chapter === parseInt(chapter)
+    );
+    const v = (chapterData?.verses || []).find(v => v.verse.toString() === verseStr);
+    return clean(v?.text);
+  }
+
+  // Nested objects { book: { chapter: { verse: text } } } (e.g. hindi_offline.json)
+  const keys = Object.keys(data);
+  for (const variant of variants) {
+    const key = data[variant] ? variant : keys.find(k => k.toLowerCase() === variant.toLowerCase());
+    const chapterData = key && data[key] && data[key][chapterStr];
+    if (chapterData) return clean(chapterData[verseStr]);
+  }
+  return '';
+};
+
 // Reads a JSON value from localStorage without crashing on missing or corrupted data
 const readStoredJSON = (key, fallback) => {
   try {
@@ -57,6 +94,14 @@ const readStoredJSON = (key, fallback) => {
     return value ?? fallback;
   } catch (e) {
     return fallback;
+  }
+};
+
+// Lets non-button elements (verses) respond to Enter and Space like a button
+const activateOnKey = (e, action) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    action();
   }
 };
 
@@ -106,7 +151,8 @@ export default function BibleReader() {
   const [selectedVerses, setSelectedVerses] = useState([]);
   const [activeHighlightColor, setActiveHighlightColor] = useState('gold');
   const [copyFeedback, setCopyFeedback] = useState(false);
-  const [compareModal, setCompareModal] = useState({ isOpen: false, loading: false, data: [] });
+  const [compareModal, setCompareModal] = useState({ isOpen: false, ref: '', items: [] });
+  const compareSessionRef = useRef(null);
   const [verseNotes, setVerseNotes] = useState({});
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
   const [dictionaryModal, setDictionaryModal] = useState({
@@ -184,6 +230,19 @@ export default function BibleReader() {
       }));
     } catch (e) {}
   }, [isReady, book, chapter, primaryLang, secondaryLang]);
+
+  // Esc closes the top-most dialog, or clears the verse selection
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (compareModal.isOpen) closeCompareModal();
+      else if (dictionaryModal.isOpen) setDictionaryModal(prev => ({ ...prev, isOpen: false }));
+      else if (noteModal.isOpen) setNoteModal({ isOpen: false, verseRef: '', text: '' });
+      else if (selectedVerses.length > 0) handleClearSelection();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [compareModal.isOpen, dictionaryModal.isOpen, noteModal.isOpen, selectedVerses.length]);
 
   // After following a link to a specific verse, scroll to it and flash it
   useEffect(() => {
@@ -501,7 +560,7 @@ export default function BibleReader() {
     if (targets.length === 0) return;
     const refStr = getSelectedRefString(targets);
     const formattedVerses = targets.map(sv => {
-      const clean = sv.text.replace(/<[^>]*>?/gm, '').trim();
+      const clean = stripRedLetterMarks(sv.text.replace(/<[^>]*>?/gm, '')).trim();
       return `${sv.verseNum} ${clean}`;
     }).join('\n');
     const fullText = `${refStr} (${primaryLang.replace('_offline', '').toUpperCase()})\n${formattedVerses}`;
@@ -520,7 +579,7 @@ export default function BibleReader() {
     if (targets.length === 0) return;
     const refStr = getSelectedRefString(targets);
     const formattedVerses = targets.map(sv => {
-      const clean = sv.text.replace(/<[^>]*>?/gm, '').trim();
+      const clean = stripRedLetterMarks(sv.text.replace(/<[^>]*>?/gm, '')).trim();
       return `${sv.verseNum} ${clean}`;
     }).join(' ');
     const fullText = `"${formattedVerses}" — ${refStr} (${primaryLang.replace('_offline', '').toUpperCase()}) | via Chosen Word`;
@@ -553,81 +612,60 @@ export default function BibleReader() {
     handleClearSelection();
   };
 
-  const handleCompare = async () => {
-    if (!selectedVerse) return;
-    setCompareModal({ isOpen: true, loading: true, data: [] });
-    
-    const results = [];
-    const targetVerseNum = selectedVerse.verseObj.verseNum.toString();
-    const variants = getBookNameVariants(book);
+  // Compare shows translations that are already downloaded straight away and lets the
+  // reader choose which others to download (each one is a full Bible, 2.5-12 MB).
+  const handleCompare = () => {
+    // Compare uses the first selected verse
+    const target = selectedVerse || selectedVerses[0];
+    if (!target) return;
+    const verseNum = target.verseObj.verseNum.toString();
+    const session = { book, chapter, verseNum };
+    compareSessionRef.current = session;
 
-    for (const langObj of offlineTranslations) {
-      try {
-        const data = await fetchTranslationData(langObj.filename);
-        
-        let text = '';
-        if (data.verses && Array.isArray(data.verses)) {
-          const verseData = data.verses.find(v => 
-            variants.includes(v.book_name) && 
-            v.chapter.toString() === chapter.toString() && 
-            v.verse.toString() === targetVerseNum
-          );
-          if (verseData) text = verseData.text;
-        } else if (data.books && Array.isArray(data.books)) {
-          const bookData = findBookInData(data.books, book);
-          if (bookData) {
-            const chapterData = bookData.chapters.find(c => 
-              (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
-            );
-            if (chapterData && chapterData.verses) {
-              const verseData = chapterData.verses.find(v => v.verse.toString() === targetVerseNum);
-              if (verseData) text = verseData.text;
-            }
-          }
-        } else if (Array.isArray(data)) {
-          const bookData = findBookInData(data, book);
-          if (bookData) {
-            const chapterData = (bookData.chapters || []).find(c => 
-              (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
-            );
-            if (chapterData && chapterData.verses) {
-              const verseData = chapterData.verses.find(v => v.verse.toString() === targetVerseNum);
-              if (verseData) text = verseData.text;
-            }
-          }
-        } else {
-          let c = null;
-          for (const variant of variants) {
-            if (data[variant] && data[variant][chapter]) {
-              c = data[variant][chapter];
-              break;
-            }
-          }
-          if (!c) {
-            const keys = Object.keys(data);
-            for (const variant of variants) {
-              const matchedKey = keys.find(k => k.toLowerCase() === variant.toLowerCase());
-              if (matchedKey && data[matchedKey] && data[matchedKey][chapter]) {
-                c = data[matchedKey][chapter];
-                break;
-              }
-            }
-          }
-          if (c && c[targetVerseNum]) {
-            text = c[targetVerseNum];
-          }
-        }
-        
-        if (text) {
-          results.push({ name: langObj.name, text: text.replace(/<[^>]*>?/gm, '') });
-        }
-      } catch (e) {
-        console.error(`Error loading compare for ${langObj.name}`, e);
-      }
+    const items = offlineTranslations.map(t => {
+      const cached = bibleDataCache[t.filename];
+      if (!cached) return { ...t, status: 'idle', text: '' };
+      const text = findVerseText(cached, book, chapter, verseNum);
+      return { ...t, status: text ? 'ready' : 'missing', text };
+    });
+
+    setCompareModal({ isOpen: true, ref: `${book} ${chapter}:${verseNum}`, items });
+    handleClearSelection();
+  };
+
+  const updateCompareItem = (session, id, changes) => {
+    if (compareSessionRef.current !== session) return; // modal closed or a different verse opened
+    setCompareModal(prev => ({
+      ...prev,
+      items: prev.items.map(item => (item.id === id ? { ...item, ...changes } : item)),
+    }));
+  };
+
+  const loadCompareTranslation = async (translation, session = compareSessionRef.current) => {
+    if (!session) return;
+    updateCompareItem(session, translation.id, { status: 'loading' });
+    try {
+      const data = await fetchTranslationData(translation.filename);
+      const text = findVerseText(data, session.book, session.chapter, session.verseNum);
+      updateCompareItem(session, translation.id, { status: text ? 'ready' : 'missing', text });
+    } catch (e) {
+      updateCompareItem(session, translation.id, { status: 'error' });
     }
-    
-    setCompareModal({ isOpen: true, loading: false, data: results });
-    setSelectedVerse(null);
+  };
+
+  // One at a time, so a slow phone isn't parsing several large files at once
+  const loadAllCompareTranslations = async () => {
+    const session = compareSessionRef.current;
+    const pending = compareModal.items.filter(item => item.status === 'idle' || item.status === 'error');
+    for (const translation of pending) {
+      if (compareSessionRef.current !== session) return;
+      await loadCompareTranslation(translation, session);
+    }
+  };
+
+  const closeCompareModal = () => {
+    compareSessionRef.current = null;
+    setCompareModal({ isOpen: false, ref: '', items: [] });
   };
 
   const handleLookupWord = async (rawWord) => {
@@ -706,7 +744,7 @@ export default function BibleReader() {
 
     if (!verses.length) return;
 
-    const textToRead = verses.map(v => `${v.verseNum}. ${v.primaryText}`).join('. ');
+    const textToRead = verses.map(v => `${v.verseNum}. ${stripRedLetterMarks(v.primaryText)}`).join('. ');
     const utterance = new SpeechSynthesisUtterance(textToRead);
     
     let targetLang = getTtsLanguage(primaryLang);
@@ -781,9 +819,11 @@ export default function BibleReader() {
           </select>
           
           {/* Bookmark Button */}
-          <button 
+          <button
             onClick={toggleBookmark}
-            style={{ 
+            aria-label={isChapterBookmarked() ? `Remove bookmark for ${book} ${chapter}` : `Bookmark ${book} ${chapter}`}
+            aria-pressed={isChapterBookmarked()}
+            style={{  
               backgroundColor: isChapterBookmarked() ? 'var(--accent-gold-light)' : 'var(--bg-secondary)',
               color: isChapterBookmarked() ? 'var(--accent-gold)' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
@@ -801,10 +841,12 @@ export default function BibleReader() {
           </button>
           
           {/* Audio Play Button */}
-          <button 
+          <button
             onClick={handlePlayAudio}
-            style={{ 
-              backgroundColor: isPlaying ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+            aria-label={isPlaying ? 'Stop reading aloud' : 'Read chapter aloud'}
+            aria-pressed={isPlaying}
+            style={{
+              backgroundColor: isPlaying ? 'var(--accent-blue-fill)' : 'var(--bg-secondary)',
               color: isPlaying ? 'white' : 'var(--text-secondary)',
               borderRadius: 'var(--radius-sm)',
               width: '44px',
@@ -973,6 +1015,7 @@ export default function BibleReader() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setShowBookIntro(!showBookIntro); }}
+                        aria-expanded={showBookIntro}
                         style={{
                           fontSize: '0.8rem',
                           fontWeight: 600,
@@ -981,6 +1024,7 @@ export default function BibleReader() {
                           alignItems: 'center',
                           gap: '6px',
                           padding: '4px 0',
+                          minHeight: '44px',
                           cursor: 'pointer'
                         }}
                       >
@@ -1036,6 +1080,7 @@ export default function BibleReader() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowThemesNotes(!showThemesNotes); }}
+                      aria-expanded={showThemesNotes}
                       style={{
                         fontSize: '0.8rem',
                         fontWeight: 600,
@@ -1044,6 +1089,7 @@ export default function BibleReader() {
                         alignItems: 'center',
                         gap: '6px',
                         padding: '4px 0',
+                        minHeight: '44px',
                         cursor: 'pointer'
                       }}
                     >
@@ -1104,13 +1150,15 @@ export default function BibleReader() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setShowNoteEditor(!showNoteEditor); }}
+                        aria-expanded={showNoteEditor}
                         style={{
                           fontSize: '0.82rem',
                           fontWeight: 700,
-                          color: chapterNotes[`${book} ${chapter}`] ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                          color: chapterNotes[`${book} ${chapter}`] ? 'var(--accent-gold-text)' : 'var(--text-secondary)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
+                          minHeight: '44px',
                           cursor: 'pointer'
                         }}
                       >
@@ -1149,7 +1197,7 @@ export default function BibleReader() {
                             style={{
                               padding: '6px 14px',
                               borderRadius: 'var(--radius-sm)',
-                              backgroundColor: 'var(--accent-blue)',
+                              backgroundColor: 'var(--accent-blue-fill)',
                               color: 'white',
                               fontSize: '0.82rem',
                               fontWeight: 600,
@@ -1180,9 +1228,14 @@ export default function BibleReader() {
                   <p 
                     className={`verse-item ${getHighlightClass(v.verseNum, v.primaryText)} ${isVerseSelected(v.verseNum, v.primaryText) ? 'selected-verse' : ''}`}
                     onClick={() => handleVerseClick(v, v.primaryText, primaryLang)}
+                    onKeyDown={(e) => activateOnKey(e, () => handleVerseClick(v, v.primaryText, primaryLang))}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isVerseSelected(v.verseNum, v.primaryText)}
+                    aria-label={`Verse ${v.verseNum}: ${stripRedLetterMarks(v.primaryText)}`}
                     style={{ fontSize: '1.25rem', margin: 0, cursor: 'pointer', lineHeight: 1.6, display: 'inline', color: 'var(--text-primary)' }}
                   >
-                    {v.primaryText}
+                    {renderRedLetter(v.primaryText)}
                   </p>
                   {verseNotes[`${book} ${chapter}:${v.verseNum}`] && (
                     <FileText size={16} style={{ color: 'var(--accent-blue)', verticalAlign: 'middle', marginLeft: '8px', display: 'inline-block', opacity: 0.8 }} />
@@ -1193,6 +1246,11 @@ export default function BibleReader() {
                     <p 
                       className={`verse-item ${getHighlightClass(v.verseNum, v.secondaryText)} ${isVerseSelected(v.verseNum, v.secondaryText) ? 'selected-verse' : ''}`}
                       onClick={() => handleVerseClick(v, v.secondaryText, secondaryLang)}
+                      onKeyDown={(e) => activateOnKey(e, () => handleVerseClick(v, v.secondaryText, secondaryLang))}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isVerseSelected(v.verseNum, v.secondaryText)}
+                      aria-label={`Verse ${v.verseNum} (second translation): ${stripRedLetterMarks(v.secondaryText)}`}
                       style={{ 
                         fontSize: '1.15rem', 
                         margin: 0, 
@@ -1202,7 +1260,7 @@ export default function BibleReader() {
                         fontStyle: 'italic'
                       }}
                     >
-                      {v.secondaryText}
+                      {renderRedLetter(v.secondaryText)}
                     </p>
                   )}
                 </div>
@@ -1308,8 +1366,9 @@ export default function BibleReader() {
                 )}
                 <button
                   onClick={handleClearSelection}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   title="Deselect all"
+                  aria-label="Deselect all verses"
                 >
                   <X size={16} />
                 </button>
@@ -1448,43 +1507,95 @@ export default function BibleReader() {
       )}
 
       {/* Compare Modal */}
-      {compareModal.isOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Verse Comparison</h3>
-              <button 
-                onClick={() => setCompareModal({ isOpen: false, loading: false, data: [] })}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+      {compareModal.isOpen && (() => {
+        const shown = compareModal.items.filter(item => item.status === 'ready');
+        const notLoaded = compareModal.items.filter(item => item.status === 'idle' || item.status === 'error' || item.status === 'loading');
+        const missing = compareModal.items.filter(item => item.status === 'missing');
+        const anyLoading = notLoaded.some(item => item.status === 'loading');
+        const remainingMB = notLoaded.filter(item => item.status !== 'loading').reduce((sum, item) => sum + item.sizeMB, 0);
+        return (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Compare translations of ${compareModal.ref}`}
+          onClick={(e) => { if (e.target === e.currentTarget) closeCompareModal(); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Compare Translations</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{compareModal.ref}</p>
+              </div>
+              <button
+                onClick={closeCompareModal}
+                aria-label="Close comparison"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', padding: '8px' }}
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {compareModal.loading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '40px 0' }}>
-                  <Loader2 size={24} className="spin" style={{ color: 'var(--accent-blue)' }} />
-                  <p style={{ color: 'var(--text-secondary)' }}>Loading translations...</p>
+              {shown.map((item, idx) => (
+                <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '12px', borderBottom: idx !== shown.length - 1 || notLoaded.length > 0 ? '1px solid var(--border-color)' : 'none' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>{item.name}</span>
+                  <p style={{ margin: 0, fontSize: '1.1rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>{renderRedLetter(item.text)}</p>
                 </div>
-              ) : compareModal.data.length > 0 ? (
-                compareModal.data.map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '12px', borderBottom: idx !== compareModal.data.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>{item.name}</span>
-                    <p style={{ margin: 0, fontSize: '1.1rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>{item.text}</p>
+              ))}
+
+              {notLoaded.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>More translations</span>
+                    {remainingMB > 0 && (
+                      <button
+                        onClick={loadAllCompareTranslations}
+                        disabled={anyLoading}
+                        style={{ padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--accent-blue)', background: 'none', color: 'var(--accent-blue)', fontSize: '0.8rem', fontWeight: 600, cursor: anyLoading ? 'wait' : 'pointer', opacity: anyLoading ? 0.6 : 1 }}
+                      >
+                        Load all ({Math.round(remainingMB)} MB)
+                      </button>
+                    )}
                   </div>
-                ))
-              ) : (
-                <p>No comparisons available.</p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                    Each translation is downloaded once, then works offline.
+                  </p>
+                  {notLoaded.map(item => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                      <span style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                        {item.name}
+                        {item.status === 'error' && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}> · couldn't load</span>}
+                      </span>
+                      {item.status === 'loading' ? (
+                        <Loader2 size={18} className="spin" style={{ color: 'var(--accent-blue)' }} aria-label={`Loading ${item.name}`} />
+                      ) : (
+                        <button
+                          onClick={() => loadCompareTranslation(item)}
+                          style={{ padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          {item.status === 'error' ? 'Retry' : `Load · ${item.sizeMB} MB`}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {missing.length > 0 && (
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                  Not in {missing.map(item => item.name).join(', ')}.
+                </p>
               )}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Note Modal */}
       {noteModal.isOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
+        <div role="dialog" aria-modal="true" aria-label={`Note for ${noteModal.verseRef}`} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
           <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Note for {noteModal.verseRef}</h3>
             <textarea
@@ -1503,7 +1614,7 @@ export default function BibleReader() {
               </button>
               <button 
                 onClick={handleSaveNote}
-                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--accent-blue)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--accent-blue-fill)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
               >
                 Save Note
               </button>
@@ -1514,7 +1625,7 @@ export default function BibleReader() {
 
       {/* Dictionary / Lexicon Modal */}
       {dictionaryModal.isOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
+        <div role="dialog" aria-modal="true" aria-label="Biblical dictionary" style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '20px' }}>
           <div className="card" style={{ width: '100%', maxWidth: '520px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
@@ -1524,7 +1635,8 @@ export default function BibleReader() {
               </div>
               <button 
                 onClick={() => setDictionaryModal(prev => ({ ...prev, isOpen: false }))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                aria-label="Close dictionary"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px' }}
               >
                 <X size={20} />
               </button>
@@ -1561,7 +1673,7 @@ export default function BibleReader() {
                   style={{
                     padding: '8px 14px',
                     borderRadius: 'var(--radius-sm)',
-                    background: 'var(--accent-blue)',
+                    background: 'var(--accent-blue-fill)',
                     color: 'white',
                     border: 'none',
                     fontWeight: 600,
@@ -1750,10 +1862,11 @@ export default function BibleReader() {
             </div>
           </div>
           
-          <button 
+          <button
             onClick={handlePlayAudio}
-            style={{ 
-              background: 'var(--bg-secondary)', 
+            aria-label="Stop reading aloud"
+            style={{
+              background: 'var(--bg-secondary)',  
               color: 'var(--text-primary)', 
               width: '40px', height: '40px', 
               borderRadius: '50%', 

@@ -168,19 +168,24 @@ export default function DictionaryPage() {
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
                 style={{
                   position: 'absolute',
-                  right: '12px',
+                  right: '2px',
                   top: '50%',
                   transform: 'translateY(-50%)',
+                  width: '44px',
+                  height: '44px',
                   background: 'none',
                   border: 'none',
                   color: 'var(--text-secondary)',
                   cursor: 'pointer',
-                  display: 'flex'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                <X size={16} />
+                <X size={16} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -212,13 +217,14 @@ export default function DictionaryPage() {
           <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '8px', letterSpacing: '0.5px' }}>
             Popular Biblical & Theological Terms
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {SUGGESTED_TERMS.map((term) => (
               <button
                 key={term}
                 onClick={() => handleSelectSuggested(term)}
                 style={{
-                  padding: '5px 11px',
+                  padding: '5px 14px',
+                  minHeight: '40px',
                   borderRadius: '100px',
                   fontSize: '0.8rem',
                   fontWeight: 600,
@@ -274,7 +280,7 @@ export default function DictionaryPage() {
                   gap: '6px',
                   padding: '9px 16px',
                   borderRadius: '100px',
-                  backgroundColor: audioPlaying ? 'var(--accent-blue)' : 'var(--accent-blue-light)',
+                  backgroundColor: audioPlaying ? 'var(--accent-blue-fill)' : 'var(--accent-blue-light)',
                   color: audioPlaying ? 'white' : 'var(--accent-blue)',
                   border: 'none',
                   fontWeight: 600,

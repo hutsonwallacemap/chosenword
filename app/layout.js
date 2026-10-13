@@ -12,6 +12,10 @@ export const metadata = {
 };
 
 export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Lets the bottom nav use env(safe-area-inset-bottom) on notched phones
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },

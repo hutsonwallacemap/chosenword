@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { offlineTranslations } from '../data/translations';
 import { ALL_BOOKS, normalizeBookName } from '../data/books';
+import { stripRedLetterMarks } from '../lib/verseText';
 import { ArrowLeft, Search, Loader2 } from 'lucide-react';
 
 const MAX_RESULTS = 100;
@@ -79,7 +80,7 @@ export default function SearchPage() {
       const addResult = (bookName, chapter, verse, text) => {
         const book = normalizeBookName(bookName);
         if (!book) return;
-        searchResults.push({ book, chapter, verse, text: text.replace(/<[^>]*>?/gm, '') });
+        searchResults.push({ book, chapter, verse, text: stripRedLetterMarks(text.replace(/<[^>]*>?/gm, '')) });
       };
 
       // Handle new JSON format (Flat Array of Verses)
@@ -155,11 +156,13 @@ export default function SearchPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button 
-          onClick={() => router.back()} 
-          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '50%', backgroundColor: 'var(--bg-secondary)' }}
+        <button
+          onClick={() => router.back()}
+          aria-label="Go back"
+          className="icon-btn"
+          style={{ color: 'var(--text-primary)', boxShadow: 'none' }}
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={20} aria-hidden="true" />
         </button>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Global Search</h1>
       </div>
@@ -202,7 +205,7 @@ export default function SearchPage() {
               padding: '16px', 
               borderRadius: 'var(--radius-md)', 
               border: 'none', 
-              background: 'var(--accent-blue)', 
+              background: 'var(--accent-blue-fill)', 
               color: 'white', 
               fontSize: '1.1rem', 
               fontWeight: 700, 

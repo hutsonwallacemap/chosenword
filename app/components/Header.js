@@ -64,30 +64,9 @@ export default function Header() {
         onClick={toggleTheme}
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        style={{
-        color: 'var(--text-secondary)',
-        backgroundColor: 'var(--bg-secondary)',
-        width: '40px',
-        height: '40px',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: 'var(--shadow-sm)',
-        border: '1px solid var(--border-color)',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease'
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.color = 'var(--text-primary)';
-        e.currentTarget.style.transform = 'scale(1.05)';
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.color = 'var(--text-secondary)';
-        e.currentTarget.style.transform = 'scale(1)';
-      }}
+        className="icon-btn"
       >
-        {isDark ? <Sun size={18} strokeWidth={2.5} /> : <Moon size={18} strokeWidth={2.5} />}
+        {isDark ? <Sun size={18} strokeWidth={2.5} aria-hidden="true" /> : <Moon size={18} strokeWidth={2.5} aria-hidden="true" />}
       </button>
     </header>
   );

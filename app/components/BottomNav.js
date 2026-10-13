@@ -9,28 +9,30 @@ export default function BottomNav() {
   const navItems = [
     { name: 'Home', path: '/', Icon: Home },
     { name: 'Bible', path: '/bible', Icon: BookOpen },
-    { name: 'Study', path: '/study', Icon: GraduationCap },
+    // Dictionary, Calendar and Maps are opened from the Study hub
+    { name: 'Study', path: '/study', Icon: GraduationCap, also: ['/dictionary', '/calendar', '/places'] },
     { name: 'Saved', path: '/saved', Icon: Bookmark },
     { name: 'Settings', path: '/settings', Icon: Settings },
   ];
 
   return (
-    <nav className="glass-panel" style={{
+    <nav className="glass-panel" aria-label="Main" style={{
       position: 'fixed',
       bottom: 0,
       width: '100%',
       display: 'flex',
       justifyContent: 'space-around',
-      padding: '12px 0 20px', // extra padding bottom for iOS safe area
+      // Clears the home indicator on notched phones (needs viewportFit: 'cover' in layout.js)
+      padding: '10px 0 calc(10px + env(safe-area-inset-bottom))',
       boxShadow: '0 -4px 20px rgba(0,0,0,0.05)',
       zIndex: 100,
       borderTop: '1px solid var(--border-color)'
     }}>
       {navItems.map((item) => {
-        const isActive = pathname === item.path;
+        const isActive = pathname === item.path || (item.also || []).some(p => pathname.startsWith(p));
         const IconComponent = item.Icon;
         return (
-          <Link href={item.path} key={item.name} style={{
+          <Link href={item.path} key={item.name} aria-current={isActive ? 'page' : undefined} style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -40,7 +42,8 @@ export default function BottomNav() {
             fontWeight: isActive ? 600 : 500,
             gap: '3px',
             transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            minWidth: '52px',
+            minWidth: '56px',
+            minHeight: '44px',
           }}>
             <div style={{
               padding: '4px 12px',
@@ -54,7 +57,8 @@ export default function BottomNav() {
             }}>
               <IconComponent 
                 size={22} 
-                strokeWidth={isActive ? 2.5 : 2} 
+                strokeWidth={isActive ? 2.5 : 2}
+                aria-hidden="true"
                 style={{
                   color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
                   transition: 'color 0.3s ease'

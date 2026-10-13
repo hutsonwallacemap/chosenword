@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { downloadBackup } from '../lib/backup';
+import { stripRedLetterMarks } from '../lib/verseText';
 
 // Helper to parse verse reference like "John 3:16" or "1 John 2:1" into book & chapter
 const parseRef = (ref) => {
@@ -162,7 +163,7 @@ export default function SavedItems() {
 
   // Share Verse
   const shareVerse = (verse) => {
-    const text = `"${verse.text}" - ${verse.ref} (${(verse.lang || 'kjv').toUpperCase()}) | via Chosen Word`;
+    const text = `"${stripRedLetterMarks(verse.text)}" - ${verse.ref} (${(verse.lang || 'kjv').toUpperCase()}) | via Chosen Word`;
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
         title: 'Share Verse',
@@ -332,7 +333,7 @@ export default function SavedItems() {
             padding: '12px', 
             borderRadius: 'var(--radius-sm)', 
             backgroundColor: activeTab === 'verses' ? 'var(--accent-gold)' : 'var(--bg-card)',
-            color: activeTab === 'verses' ? '#fff' : 'var(--text-secondary)',
+            color: activeTab === 'verses' ? '#1e293b' : 'var(--text-secondary)',
             fontWeight: 700,
             fontSize: '0.9rem',
             border: `1px solid ${activeTab === 'verses' ? 'var(--accent-gold)' : 'var(--border-color)'}`,
@@ -377,7 +378,7 @@ export default function SavedItems() {
           style={{ 
             padding: '12px', 
             borderRadius: 'var(--radius-sm)', 
-            backgroundColor: activeTab === 'chapters' ? 'var(--accent-blue)' : 'var(--bg-card)',
+            backgroundColor: activeTab === 'chapters' ? 'var(--accent-blue-fill)' : 'var(--bg-card)',
             color: activeTab === 'chapters' ? '#fff' : 'var(--text-secondary)',
             fontWeight: 700,
             fontSize: '0.9rem',
@@ -469,7 +470,7 @@ export default function SavedItems() {
               <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                 Tap on any verse in the Bible reader to select and highlight with your favorite color.
               </p>
-              <Link href="/bible" style={{ display: 'inline-block', marginTop: '16px', padding: '8px 18px', background: 'var(--accent-gold)', color: '#fff', borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}>
+              <Link href="/bible" style={{ display: 'inline-block', marginTop: '16px', padding: '8px 18px', background: 'var(--accent-gold)', color: '#1e293b', borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}>
                 Go to Bible Reader
               </Link>
             </div>
@@ -536,7 +537,7 @@ export default function SavedItems() {
                     </div>
                     
                     <p style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '16px', lineHeight: 1.6, fontStyle: 'italic' }}>
-                      &ldquo;{v.text}&rdquo;
+                      &ldquo;{stripRedLetterMarks(v.text)}&rdquo;
                     </p>
                     
                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
@@ -548,7 +549,7 @@ export default function SavedItems() {
                       </button>
                       <button 
                         onClick={() => removeVerse(v.ref, v.text)} 
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: 600, padding: '6px 12px', backgroundColor: '#fef2f2', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', fontWeight: 600, padding: '6px 12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
                       >
                         <Trash2 size={14} /> Delete
                       </button>
@@ -694,7 +695,7 @@ export default function SavedItems() {
                           </button>
                           <button
                             onClick={saveEditedNote}
-                            style={{ padding: '5px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-blue)', color: 'white', border: 'none', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                            style={{ padding: '5px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-blue-fill)', color: 'white', border: 'none', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                           >
                             Save Note
                           </button>
@@ -720,7 +721,7 @@ export default function SavedItems() {
                         </button>
                         <button
                           onClick={() => deleteNote(item.type, item.key)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', padding: '5px 10px', borderRadius: 'var(--radius-sm)', border: 'none', background: '#fef2f2', cursor: 'pointer', fontSize: '0.78rem' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--danger)', padding: '5px 10px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'rgba(239, 68, 68, 0.1)', cursor: 'pointer', fontSize: '0.78rem' }}
                         >
                           <Trash2 size={13} /> Delete
                         </button>
@@ -765,7 +766,7 @@ export default function SavedItems() {
                           flex: 1, 
                           textAlign: 'center', 
                           padding: '8px', 
-                          backgroundColor: 'var(--accent-blue)', 
+                          backgroundColor: 'var(--accent-blue-fill)', 
                           color: '#fff', 
                           borderRadius: 'var(--radius-sm)', 
                           fontWeight: 600, 
@@ -779,8 +780,8 @@ export default function SavedItems() {
                         onClick={() => removeBookmark(b.ref)} 
                         style={{ 
                           padding: '8px 12px', 
-                          backgroundColor: '#fef2f2', 
-                          color: '#ef4444', 
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                          color: 'var(--danger)', 
                           borderRadius: 'var(--radius-sm)', 
                           border: 'none', 
                           cursor: 'pointer' 

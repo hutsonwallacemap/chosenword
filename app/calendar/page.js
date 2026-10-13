@@ -296,7 +296,7 @@ export default function BiblicalCalendarPage() {
                     <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                       {feast.name}
                     </h3>
-                    <span style={{ fontSize: '1.2rem', fontFamily: 'serif', color: feast.badgeColor || 'var(--accent-gold)' }}>
+                    <span style={{ fontSize: '1.2rem', fontFamily: 'serif', color: 'var(--text-secondary)' }}>
                       {feast.hebrewName}
                     </span>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
@@ -349,15 +349,21 @@ export default function BiblicalCalendarPage() {
 
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : feast.id)}
+                    aria-label={isExpanded ? `Hide details for ${feast.name}` : `Show details for ${feast.name}`}
+                    aria-expanded={isExpanded}
                     style={{
                       background: 'none',
                       border: 'none',
                       color: 'var(--text-secondary)',
                       cursor: 'pointer',
-                      padding: '4px'
+                      width: '44px',
+                      height: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
-                    <ChevronRight size={20} style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                    <ChevronRight size={20} aria-hidden="true" style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
                   </button>
                 </div>
               </div>

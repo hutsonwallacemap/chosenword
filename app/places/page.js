@@ -296,7 +296,7 @@ export default function BiblicalPlacesPage() {
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isSelected ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isSelected ? 'var(--accent-gold-text)' : 'var(--text-primary)' }}>
                           {p.name}
                         </h4>
                         <span style={{ 
@@ -369,7 +369,8 @@ export default function BiblicalPlacesPage() {
                   backdropFilter: 'blur(4px)',
                   color: 'white',
                   border: 'none',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
+                  minHeight: '44px',
                   borderRadius: '100px',
                   fontSize: '0.75rem',
                   fontWeight: 600,
