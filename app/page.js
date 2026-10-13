@@ -2,7 +2,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { dailyVerses, dailyQuizzes } from './data/dailyContent';
-import { Flame, Trophy, BookOpen, Search, Library, Bookmark, GraduationCap, HelpCircle, CheckCircle2, XCircle, BookMarked, Calendar, MapPin } from 'lucide-react';
+import { offlineTranslations } from './data/translations';
+import { Flame, Trophy, ArrowRight, BookOpen, Search, Library, Bookmark, GraduationCap, HelpCircle, CheckCircle2, XCircle, BookMarked, Calendar, MapPin } from 'lucide-react';
 
 // Seeded random number generator
 function mulberry32(a) {
@@ -18,6 +19,7 @@ export default function Home() {
   const [dailyData, setDailyData] = useState(null);
   const [quizState, setQuizState] = useState({});
   const [streaks, setStreaks] = useState({ current: 0, longest: 0 });
+  const [lastRead, setLastRead] = useState(null);
 
   useEffect(() => {
     // Calculate Day of Year (1-365)
@@ -46,9 +48,11 @@ export default function Home() {
     
     // Load quiz progress from localStorage
     const savedState = localStorage.getItem(`cw_quiz_${dayOfYear}`);
-    if (savedState) {
-      setQuizState(JSON.parse(savedState));
-    }
+    try {
+      if (savedState) setQuizState(JSON.parse(savedState));
+      const storedLastRead = JSON.parse(localStorage.getItem('cw_last_read'));
+      if (storedLastRead && storedLastRead.book) setLastRead(storedLastRead);
+    } catch (e) {}
 
     // Streaks Logic
     const todayStr = now.toDateString();
@@ -178,6 +182,36 @@ export default function Home() {
           <p style={{ fontWeight: 700, fontSize: '1.1rem', opacity: 0.9, letterSpacing: '0.5px' }}>{dailyData.verse.reference}</p>
         </div>
       </div>
+
+      {/* Continue Reading */}
+      {lastRead && (
+        <Link href="/bible" className="card" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '18px 20px',
+          textDecoration: 'none',
+          borderLeft: '4px solid var(--accent-blue)'
+        }}>
+          <div style={{
+            background: 'var(--accent-blue-light)',
+            padding: '12px',
+            borderRadius: '12px',
+            display: 'flex',
+            color: 'var(--accent-blue)'
+          }}>
+            <BookMarked size={24} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Continue Reading</p>
+            <p style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{lastRead.book} {lastRead.chapter}</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              {offlineTranslations.find(t => t.id === lastRead.primaryLang)?.name || 'English: KJV'}
+            </p>
+          </div>
+          <ArrowRight size={20} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+        </Link>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', paddingLeft: '4px', letterSpacing: '-0.02em' }}>Explore</h3>

@@ -6,83 +6,56 @@ import {
   Sun, 
   Moon, 
   Type, 
-  CheckCircle2, 
-  Database, 
-  Download, 
-  Upload, 
-  Check, 
-  Trash2, 
-  HardDrive, 
-  ShieldCheck, 
-  RefreshCw,
-  Bell,
-  Sparkles
+  CheckCircle2,
+  Download,
+  Upload,
+  Check,
+  Trash2,
+  ShieldCheck,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
+import { applyTheme, getCurrentTheme, THEME_EVENT } from '../lib/theme';
+import { getDataSummary, downloadBackup, restoreBackup, eraseAllUserData, describeRestore } from '../lib/backup';
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState('light');
   const [fontSize, setFontSize] = useState('medium');
-  const [storageStats, setStorageStats] = useState({
-    versesCount: 0,
-    bookmarksCount: 0,
-    notesCount: 0,
-    bytesUsed: 0,
-    kbUsed: '0'
-  });
+  const [summary, setSummary] = useState({ highlights: 0, notes: 0, bookmarks: 0, lastBackup: null });
   const [exportSuccess, setExportSuccess] = useState(false);
-  const [importStatus, setImportStatus] = useState('');
-  const [reminderResetMsg, setReminderResetMsg] = useState(false);
+  // { type: 'success' | 'error', text }
+  const [backupMessage, setBackupMessage] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const calculateStorage = () => {
+  const refreshSummary = () => {
     try {
-      const savedVerses = JSON.parse(localStorage.getItem('cw_saved_verses') || '[]');
-      const bookmarks = JSON.parse(localStorage.getItem('cw_bookmarks') || '[]');
-      const verseNotes = JSON.parse(localStorage.getItem('cw_notes') || '{}');
-      const chNotes = JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}');
-      const bNotes = JSON.parse(localStorage.getItem('cw_book_notes') || '{}');
-
-      const totalNotes = Object.keys(verseNotes).length + Object.keys(chNotes).length + Object.keys(bNotes).length;
-
-      // Approximate localStorage bytes used by this origin
-      let totalBytes = 0;
-      for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-          totalBytes += (localStorage[key].length + key.length) * 2;
-        }
-      }
-
-      setStorageStats({
-        versesCount: savedVerses.length,
-        bookmarksCount: bookmarks.length,
-        notesCount: totalNotes,
-        bytesUsed: totalBytes,
-        kbUsed: (totalBytes / 1024).toFixed(1)
-      });
+      setSummary(getDataSummary());
     } catch (e) {
-      console.error('Storage calculation failed', e);
+      console.error('Could not read saved data', e);
     }
   };
 
+  const showBackupMessage = (type, text) => {
+    setBackupMessage({ type, text });
+    setTimeout(() => setBackupMessage(null), 5000);
+  };
+
   useEffect(() => {
-    const savedTheme = localStorage.getItem('cw_theme') || 'light';
     const savedFontSize = localStorage.getItem('cw_font_size') || 'medium';
-    setTheme(savedTheme);
+    setTheme(getCurrentTheme());
     setFontSize(savedFontSize);
-    calculateStorage();
+    refreshSummary();
+
+    // Stay in sync when the Header toggle changes the theme
+    const handleExternalThemeChange = (e) => setTheme(e.detail);
+    window.addEventListener(THEME_EVENT, handleExternalThemeChange);
+    return () => window.removeEventListener(THEME_EVENT, handleExternalThemeChange);
   }, []);
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
-    localStorage.setItem('cw_theme', newTheme);
-    if (newTheme === 'dark') {
-      document.body.classList.add('dark-theme');
-      document.documentElement.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-      document.documentElement.classList.remove('dark-theme');
-    }
+    applyTheme(newTheme);
   };
 
   const handleFontSizeChange = (newSize) => {
@@ -97,117 +70,50 @@ export default function SettingsPage() {
     }
   };
 
-  // Export JSON Backup
-  const handleExportBackup = () => {
+  const handleBackup = () => {
     try {
-      const backupData = {
-        version: '1.0',
-        app: 'Chosen Word Bible App',
-        exportedAt: new Date().toISOString(),
-        data: {
-          savedVerses: JSON.parse(localStorage.getItem('cw_saved_verses') || '[]'),
-          bookmarks: JSON.parse(localStorage.getItem('cw_bookmarks') || '[]'),
-          notes: JSON.parse(localStorage.getItem('cw_notes') || '{}'),
-          chapterNotes: JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}'),
-          bookNotes: JSON.parse(localStorage.getItem('cw_book_notes') || '{}'),
-          readingPlans: JSON.parse(localStorage.getItem('cw_reading_plans') || '{}'),
-          settings: {
-            theme: localStorage.getItem('cw_theme') || 'light',
-            fontSize: localStorage.getItem('cw_font_size') || 'medium'
-          }
-        }
-      };
-
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `chosen_word_backup_${dateStr}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+      downloadBackup();
+      refreshSummary();
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (err) {
-      alert(`Export failed: ${err.message}`);
+      showBackupMessage('error', 'The backup could not be created. Please try again.');
     }
   };
 
-  // Import JSON Backup
-  const handleImportFile = (event) => {
+  const handleRestoreFile = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target.result);
-        const data = json.data || json;
-
-        if (data.savedVerses) {
-          const existing = JSON.parse(localStorage.getItem('cw_saved_verses') || '[]');
-          const map = new Map();
-          existing.forEach(v => map.set(`${v.ref}::${v.text}`, v));
-          data.savedVerses.forEach(v => map.set(`${v.ref}::${v.text}`, v));
-          localStorage.setItem('cw_saved_verses', JSON.stringify(Array.from(map.values())));
-        }
-
-        if (data.bookmarks) {
-          const existing = JSON.parse(localStorage.getItem('cw_bookmarks') || '[]');
-          const map = new Map();
-          existing.forEach(b => map.set(b.ref, b));
-          data.bookmarks.forEach(b => map.set(b.ref, b));
-          localStorage.setItem('cw_bookmarks', JSON.stringify(Array.from(map.values())));
-        }
-
-        if (data.notes) {
-          const existing = JSON.parse(localStorage.getItem('cw_notes') || '{}');
-          localStorage.setItem('cw_notes', JSON.stringify({ ...existing, ...data.notes }));
-        }
-
-        if (data.chapterNotes) {
-          const existing = JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}');
-          localStorage.setItem('cw_chapter_notes', JSON.stringify({ ...existing, ...data.chapterNotes }));
-        }
-
-        if (data.bookNotes) {
-          const existing = JSON.parse(localStorage.getItem('cw_book_notes') || '{}');
-          localStorage.setItem('cw_book_notes', JSON.stringify({ ...existing, ...data.bookNotes }));
-        }
-
-        calculateStorage();
-        setImportStatus('Backup restored successfully!');
-        setTimeout(() => setImportStatus(''), 4000);
+        const counts = restoreBackup(e.target.result);
+        refreshSummary();
+        showBackupMessage('success', describeRestore(counts));
       } catch (err) {
-        alert(`Invalid JSON backup file: ${err.message}`);
+        showBackupMessage('error', err.message);
       }
     };
+    reader.onerror = () => showBackupMessage('error', 'The file could not be opened.');
     reader.readAsText(file);
-    event.target.value = '';
   };
 
-  const handleResetReminder = () => {
-    localStorage.removeItem('cw_backup_reminder_dismissed');
-    setReminderResetMsg(true);
-    setTimeout(() => setReminderResetMsg(false), 3000);
-  };
-
-  const handleClearAllData = () => {
-    const confirm = window.confirm(
-      'Are you sure you want to clear your saved verses, notes, and bookmarks? This cannot be undone unless you have a JSON backup.'
+  const handleEraseAll = () => {
+    const confirmed = window.confirm(
+      'Erase all your highlights, notes, bookmarks, reading-plan progress, streaks and quiz answers from this device?\n\nThis cannot be undone. Back up first if you might want them later.'
     );
-    if (confirm) {
-      localStorage.removeItem('cw_saved_verses');
-      localStorage.removeItem('cw_bookmarks');
-      localStorage.removeItem('cw_notes');
-      localStorage.removeItem('cw_chapter_notes');
-      localStorage.removeItem('cw_book_notes');
-      calculateStorage();
-      alert('All personal data has been cleared.');
-    }
+    if (!confirmed) return;
+    eraseAllUserData();
+    refreshSummary();
+    showBackupMessage('success', 'All your data has been erased from this device.');
+  };
+
+  const formatLastBackup = (timestamp) => {
+    if (!timestamp) return 'Never backed up';
+    const date = new Date(timestamp).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return `Last backup: ${date}`;
   };
 
   return (
@@ -302,50 +208,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Data & Multi-Device Backup Section */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Database size={20} style={{ color: 'var(--accent-gold)' }} />
-            Data & Multi-Device Backup
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            {storageStats.kbUsed} KB used
-          </span>
-        </div>
+      {/* Backup & Restore Section */}
+      <div id="backup" className="card" style={{ marginBottom: '20px', scrollMarginTop: '96px' }}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ShieldCheck size={20} style={{ color: 'var(--accent-gold)' }} />
+          Backup & Restore
+        </h2>
 
         <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Chosen Word stores your data completely offline in your browser. Use the JSON backup to transfer your highlights and notes across phones, tablets, or computers with zero cloud account required.
+          Your highlights, notes and bookmarks are saved only on this device. Back them up to a file to keep them safe, or to move them to another phone or computer.
         </p>
 
-        {/* Item Count Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '18px' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Verses</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-gold)' }}>{storageStats.versesCount}</div>
-          </div>
-          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Notes</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-purple, #8b5cf6)' }}>{storageStats.notesCount}</div>
-          </div>
-          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Bookmarks</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-blue)' }}>{storageStats.bookmarksCount}</div>
-          </div>
+        {/* What will be backed up */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
+          {[
+            { label: 'Highlights', value: summary.highlights, color: 'var(--accent-gold)' },
+            { label: 'Notes', value: summary.notes, color: 'var(--accent-purple)' },
+            { label: 'Bookmarks', value: summary.bookmarks, color: 'var(--accent-blue)' },
+          ].map(stat => (
+            <div key={stat.label} style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{stat.label}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Action Buttons */}
+        <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Clock size={14} />
+          {formatLastBackup(summary.lastBackup)}
+        </p>
+
+        {/* Main actions */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImportFile} 
-            accept=".json,application/json" 
-            style={{ display: 'none' }} 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleRestoreFile}
+            accept=".json,application/json"
+            style={{ display: 'none' }}
           />
 
           <button
-            onClick={handleExportBackup}
+            onClick={handleBackup}
             style={{
               flex: 1,
               minWidth: '160px',
@@ -365,7 +269,7 @@ export default function SettingsPage() {
             }}
           >
             {exportSuccess ? <Check size={18} /> : <Download size={18} />}
-            <span>{exportSuccess ? 'Backup Downloaded!' : 'Export JSON Backup'}</span>
+            <span>{exportSuccess ? 'Backup saved' : 'Back up to file'}</span>
           </button>
 
           <button
@@ -388,57 +292,59 @@ export default function SettingsPage() {
             }}
           >
             <Upload size={18} style={{ color: 'var(--accent-blue)' }} />
-            <span>Restore JSON Backup</span>
+            <span>Restore from file</span>
           </button>
         </div>
 
-        {importStatus && (
-          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#15803d', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Check size={16} />
-            <span>{importStatus}</span>
+        {backupMessage && (
+          <div role="status" style={{
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: backupMessage.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+            color: backupMessage.type === 'error' ? '#dc2626' : '#15803d',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            {backupMessage.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
+            <span>{backupMessage.text}</span>
           </div>
         )}
 
-        {/* Secondary controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
-          <button
-            onClick={handleResetReminder}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              fontSize: '0.8rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              padding: 0
-            }}
-          >
-            <Bell size={14} />
-            <span>{reminderResetMsg ? 'Reminder enabled in Collection!' : 'Reset Backup Reminder'}</span>
-          </button>
+        <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+          Restoring adds the backup to what's already here. Nothing on this device is deleted.
+        </p>
 
+        {/* Danger zone */}
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>Erase all my data</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Removes highlights, notes, bookmarks, plan progress and streaks. Theme and text size are kept.</div>
+          </div>
           <button
-            onClick={handleClearAllData}
+            onClick={handleEraseAll}
             style={{
+              padding: '8px 14px',
+              borderRadius: 'var(--radius-sm)',
               background: 'none',
-              border: 'none',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
               color: '#ef4444',
-              fontSize: '0.8rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              cursor: 'pointer',
-              padding: 0
+              cursor: 'pointer'
             }}
           >
-            <Trash2 size={14} />
-            <span>Clear Stored Data</span>
+            <Trash2 size={15} />
+            <span>Erase</span>
           </button>
         </div>
       </div>
-
     </div>
   );
 }

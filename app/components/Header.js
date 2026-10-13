@@ -1,36 +1,30 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { BookOpen, Sun, Moon } from 'lucide-react';
+import { applyTheme, getCurrentTheme, THEME_EVENT } from '../lib/theme';
 
 export default function Header() {
   const [isDark, setIsDark] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('cw_theme');
-    if (saved === 'dark') {
-      document.body.classList.add('dark-theme');
-      setIsDark(true);
-    }
-    
+    setIsDark(getCurrentTheme() === 'dark');
+    const handleThemeChange = (e) => setIsDark(e.detail === 'dark');
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener(THEME_EVENT, handleThemeChange);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener(THEME_EVENT, handleThemeChange);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const toggleTheme = () => {
-    if (isDark) {
-      document.body.classList.remove('dark-theme');
-      localStorage.setItem('cw_theme', 'light');
-      setIsDark(false);
-    } else {
-      document.body.classList.add('dark-theme');
-      localStorage.setItem('cw_theme', 'dark');
-      setIsDark(true);
-    }
+    applyTheme(isDark ? 'light' : 'dark');
   };
 
   return (
@@ -66,7 +60,11 @@ export default function Header() {
           Chosen Word
         </h1>
       </div>
-      <button onClick={toggleTheme} style={{ 
+      <button
+        onClick={toggleTheme}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        style={{
         color: 'var(--text-secondary)',
         backgroundColor: 'var(--bg-secondary)',
         width: '40px',

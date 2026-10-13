@@ -3,35 +3,8 @@ import { useState, useEffect } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
 import { bookSummaries } from '../data/bookSummaries';
 import { lookupBiblicalWord } from '../data/biblicalDictionary';
+import { ALL_BOOKS, CHAPTER_COUNTS, normalizeBookName } from '../data/books';
 import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked } from 'lucide-react';
-
-const ALL_BOOKS = [
-  "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", 
-  "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", 
-  "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", 
-  "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", 
-  "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", 
-  "Malachi", "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", 
-  "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", 
-  "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", 
-  "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
-];
-
-const CHAPTER_COUNTS = {
-  "Genesis": 50, "Exodus": 40, "Leviticus": 27, "Numbers": 36, "Deuteronomy": 34,
-  "Joshua": 24, "Judges": 21, "Ruth": 4, "1 Samuel": 31, "2 Samuel": 24,
-  "1 Kings": 22, "2 Kings": 25, "1 Chronicles": 29, "2 Chronicles": 36, "Ezra": 10,
-  "Nehemiah": 13, "Esther": 10, "Job": 42, "Psalms": 150, "Proverbs": 31,
-  "Ecclesiastes": 12, "Song of Solomon": 8, "Isaiah": 66, "Jeremiah": 52, "Lamentations": 5,
-  "Ezekiel": 48, "Daniel": 12, "Hosea": 14, "Joel": 3, "Amos": 9,
-  "Obadiah": 1, "Jonah": 4, "Micah": 7, "Nahum": 3, "Habakkuk": 3,
-  "Zephaniah": 3, "Haggai": 2, "Zechariah": 14, "Malachi": 4, "Matthew": 28,
-  "Mark": 16, "Luke": 24, "John": 21, "Acts": 28, "Romans": 16,
-  "1 Corinthians": 16, "2 Corinthians": 13, "Galatians": 6, "Ephesians": 6, "Philippians": 4,
-  "Colossians": 4, "1 Thessalonians": 5, "2 Thessalonians": 3, "1 Timothy": 6, "2 Timothy": 4,
-  "Titus": 3, "Philemon": 1, "Hebrews": 13, "James": 5, "1 Peter": 5,
-  "2 Peter": 3, "1 John": 5, "2 John": 1, "3 John": 1, "Jude": 1, "Revelation": 22
-};
 
 // Helper: generate all possible name variants for a book
 const getBookNameVariants = (name) => {
@@ -75,6 +48,16 @@ const findBookInData = (booksList, bookName) => {
   }
   const lowerVariants = variants.map(v => v.toLowerCase());
   return booksList.find(b => b && b.name && lowerVariants.includes(b.name.toLowerCase())) || null;
+};
+
+// Reads a JSON value from localStorage without crashing on missing or corrupted data
+const readStoredJSON = (key, fallback) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value ?? fallback;
+  } catch (e) {
+    return fallback;
+  }
 };
 
 // In-memory cache for loaded translation JSONs
@@ -136,6 +119,8 @@ export default function BibleReader() {
     searchInput: ''
   });
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [targetVerse, setTargetVerse] = useState(null);
 
   // Study summary and chapter notes state
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
@@ -155,25 +140,62 @@ export default function BibleReader() {
   }, []);
 
   useEffect(() => {
-    setSavedVerses(JSON.parse(localStorage.getItem('cw_saved_verses')) || []);
-    setBookmarkedChapters(JSON.parse(localStorage.getItem('cw_bookmarks')) || []);
-    setVerseNotes(JSON.parse(localStorage.getItem('cw_notes')) || {});
+    setSavedVerses(readStoredJSON('cw_saved_verses', []));
+    setBookmarkedChapters(readStoredJSON('cw_bookmarks', []));
+    setVerseNotes(readStoredJSON('cw_notes', {}));
 
-    // Check URL query parameters on initial load
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlBook = params.get('book');
-      const urlChapter = params.get('chapter');
-      if (urlBook && ALL_BOOKS.includes(urlBook)) {
-        setBook(urlBook);
-        if (urlChapter && !isNaN(parseInt(urlChapter))) {
-          const max = CHAPTER_COUNTS[urlBook] || 1;
-          const parsed = Math.max(1, Math.min(max, parseInt(urlChapter)));
-          setChapter(parsed);
-        }
+    const clampChapter = (b, c) => Math.max(1, Math.min(CHAPTER_COUNTS[b] || 1, parseInt(c) || 1));
+
+    // A link (?book=&chapter=&verse=) wins; otherwise resume where the reader left off
+    const params = new URLSearchParams(window.location.search);
+    const urlBook = normalizeBookName(params.get('book'));
+    const lastRead = readStoredJSON('cw_last_read', null);
+
+    if (urlBook) {
+      setBook(urlBook);
+      setChapter(clampChapter(urlBook, params.get('chapter')));
+      const urlVerse = parseInt(params.get('verse'));
+      if (urlVerse > 0) setTargetVerse(urlVerse);
+    } else if (lastRead && ALL_BOOKS.includes(lastRead.book)) {
+      setBook(lastRead.book);
+      setChapter(clampChapter(lastRead.book, lastRead.chapter));
+    }
+
+    const urlTranslation = params.get('translation');
+    if (urlBook && offlineTranslations.some(t => t.id === urlTranslation)) {
+      setPrimaryLang(urlTranslation);
+    } else if (lastRead && offlineTranslations.some(t => t.id === lastRead.primaryLang)) {
+      setPrimaryLang(lastRead.primaryLang);
+    }
+    if (lastRead) {
+      if (lastRead.secondaryLang === 'none' || offlineTranslations.some(t => t.id === lastRead.secondaryLang)) {
+        setSecondaryLang(lastRead.secondaryLang || 'none');
       }
     }
+    setIsReady(true);
   }, []);
+
+  // Remember the reading position so the app (and Home) can resume it
+  useEffect(() => {
+    if (!isReady) return;
+    try {
+      localStorage.setItem('cw_last_read', JSON.stringify({
+        book, chapter, primaryLang, secondaryLang, updatedAt: Date.now()
+      }));
+    } catch (e) {}
+  }, [isReady, book, chapter, primaryLang, secondaryLang]);
+
+  // After following a link to a specific verse, scroll to it and flash it
+  useEffect(() => {
+    if (!targetVerse || loading || verses.length === 0) return;
+    const el = document.getElementById(`verse-${targetVerse}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('verse-flash');
+      setTimeout(() => el.classList.remove('verse-flash'), 2500);
+    }
+    setTargetVerse(null);
+  }, [targetVerse, loading, verses]);
 
   useEffect(() => {
     // Sync personal chapter note and intro state when book or chapter changes
@@ -315,17 +337,24 @@ export default function BibleReader() {
           }
         }
         
+        if (cancelled) return;
         setVerses(primaryVerses);
       } catch (err) {
+        if (cancelled) return;
         console.error("Fetch Error:", err);
         setError(`Failed: ${err.message}`);
         setVerses([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+    // Wait until the saved/linked position is restored so we don't load Genesis 1 first
+    if (!isReady) return;
+    // Ignore responses for a chapter the reader has already navigated away from
+    let cancelled = false;
     fetchChapter();
-  }, [book, chapter, primaryLang, secondaryLang]);
+    return () => { cancelled = true; };
+  }, [isReady, book, chapter, primaryLang, secondaryLang]);
 
   // Handle Chapter Navigation
   const handleNextChapter = () => {
@@ -1141,7 +1170,7 @@ export default function BibleReader() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {verses.map(v => (
-              <div key={v.verseNum} style={{ position: 'relative', paddingLeft: '24px' }}>
+              <div key={v.verseNum} id={`verse-${v.verseNum}`} style={{ position: 'relative', paddingLeft: '24px', scrollMarginTop: '96px', borderRadius: 'var(--radius-sm)' }}>
                 <div style={{ position: 'absolute', left: '0', top: '6px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 600, userSelect: 'none' }}>
                   {v.verseNum}
                 </div>

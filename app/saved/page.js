@@ -1,12 +1,10 @@
 'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Share2, 
   Trash2, 
-  Bookmark, 
-  Download, 
-  Upload, 
+  Bookmark,
   ShieldCheck, 
   X, 
   Check, 
@@ -20,6 +18,7 @@ import {
   HardDriveDownload,
   AlertCircle
 } from 'lucide-react';
+import { downloadBackup } from '../lib/backup';
 
 // Helper to parse verse reference like "John 3:16" or "1 John 2:1" into book & chapter
 const parseRef = (ref) => {
@@ -48,14 +47,11 @@ export default function SavedItems() {
   // Backup reminder & feedback
   const [showReminder, setShowReminder] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
-  const [importFeedback, setImportFeedback] = useState('');
   
   // Note editing state
   const [editingNoteKey, setEditingNoteKey] = useState(null);
   const [editingNoteType, setEditingNoteType] = useState('verse'); // 'verse', 'chapter', 'book'
   const [editingNoteText, setEditingNoteText] = useState('');
-
-  const fileInputRef = useRef(null);
 
   // Load all user collections from localStorage
   const loadLocalData = () => {
@@ -95,121 +91,16 @@ export default function SavedItems() {
     localStorage.setItem('cw_backup_reminder_dismissed', Date.now().toString());
   };
 
-  // Export JSON Backup
-  const handleExportBackup = () => {
+  // One-tap backup from the reminder banner (full Backup & Restore is in Settings)
+  const handleBackupNow = () => {
     try {
-      const backupData = {
-        version: '1.0',
-        app: 'Chosen Word Bible App',
-        exportedAt: new Date().toISOString(),
-        data: {
-          savedVerses: JSON.parse(localStorage.getItem('cw_saved_verses') || '[]'),
-          bookmarks: JSON.parse(localStorage.getItem('cw_bookmarks') || '[]'),
-          notes: JSON.parse(localStorage.getItem('cw_notes') || '{}'),
-          chapterNotes: JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}'),
-          bookNotes: JSON.parse(localStorage.getItem('cw_book_notes') || '{}'),
-          readingPlans: JSON.parse(localStorage.getItem('cw_reading_plans') || '{}'),
-          settings: {
-            theme: localStorage.getItem('cw_theme') || 'light',
-            fontSize: localStorage.getItem('cw_font_size') || 'medium'
-          }
-        }
-      };
-
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `chosen_word_backup_${dateStr}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+      downloadBackup();
+      setShowReminder(false);
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3500);
-      dismissReminder();
     } catch (err) {
-      alert(`Export failed: ${err.message}`);
+      alert('The backup could not be created. Please try again from Settings.');
     }
-  };
-
-  // Import JSON Backup
-  const handleImportFile = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target.result);
-        const data = json.data || json;
-
-        let vCount = 0;
-        let bCount = 0;
-        let nCount = 0;
-
-        if (data.savedVerses && Array.isArray(data.savedVerses)) {
-          const existing = JSON.parse(localStorage.getItem('cw_saved_verses') || '[]');
-          const map = new Map();
-          existing.forEach(v => map.set(`${v.ref}::${v.text}`, v));
-          data.savedVerses.forEach(v => map.set(`${v.ref}::${v.text}`, v));
-          const merged = Array.from(map.values());
-          localStorage.setItem('cw_saved_verses', JSON.stringify(merged));
-          setSavedVerses(merged);
-          vCount = data.savedVerses.length;
-        }
-
-        if (data.bookmarks && Array.isArray(data.bookmarks)) {
-          const existing = JSON.parse(localStorage.getItem('cw_bookmarks') || '[]');
-          const map = new Map();
-          existing.forEach(b => map.set(b.ref, b));
-          data.bookmarks.forEach(b => map.set(b.ref, b));
-          const merged = Array.from(map.values());
-          localStorage.setItem('cw_bookmarks', JSON.stringify(merged));
-          setBookmarkedChapters(merged);
-          bCount = data.bookmarks.length;
-        }
-
-        if (data.notes && typeof data.notes === 'object') {
-          const existing = JSON.parse(localStorage.getItem('cw_notes') || '{}');
-          const merged = { ...existing, ...data.notes };
-          localStorage.setItem('cw_notes', JSON.stringify(merged));
-          setVerseNotes(merged);
-          nCount += Object.keys(data.notes).length;
-        }
-
-        if (data.chapterNotes && typeof data.chapterNotes === 'object') {
-          const existing = JSON.parse(localStorage.getItem('cw_chapter_notes') || '{}');
-          const merged = { ...existing, ...data.chapterNotes };
-          localStorage.setItem('cw_chapter_notes', JSON.stringify(merged));
-          setChapterNotes(merged);
-          nCount += Object.keys(data.chapterNotes).length;
-        }
-
-        if (data.bookNotes && typeof data.bookNotes === 'object') {
-          const existing = JSON.parse(localStorage.getItem('cw_book_notes') || '{}');
-          const merged = { ...existing, ...data.bookNotes };
-          localStorage.setItem('cw_book_notes', JSON.stringify(merged));
-          setBookNotes(merged);
-          nCount += Object.keys(data.bookNotes).length;
-        }
-
-        if (data.readingPlans && typeof data.readingPlans === 'object') {
-          const existing = JSON.parse(localStorage.getItem('cw_reading_plans') || '{}');
-          const merged = { ...existing, ...data.readingPlans };
-          localStorage.setItem('cw_reading_plans', JSON.stringify(merged));
-        }
-
-        setImportFeedback(`Restored ${vCount} verses, ${bCount} bookmarks, and ${nCount} notes!`);
-        setTimeout(() => setImportFeedback(''), 5000);
-      } catch (err) {
-        alert(`Invalid backup JSON file: ${err.message}`);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
   };
 
   // Item deletion handlers
@@ -333,80 +224,29 @@ export default function SavedItems() {
           </p>
         </div>
 
-        {/* Export / Import Toolbar */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImportFile} 
-            accept=".json,application/json" 
-            style={{ display: 'none' }} 
-          />
-          
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 14px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-color)',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)'
-            }}
-          >
-            <Upload size={15} style={{ color: 'var(--accent-blue)' }} />
-            <span>Restore JSON</span>
-          </button>
-
-          <button
-            onClick={handleExportBackup}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 16px',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--accent-gold-grad)',
-              color: '#1e293b',
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)'
-            }}
-          >
-            {exportSuccess ? <Check size={16} /> : <Download size={15} />}
-            <span>{exportSuccess ? 'Backup Downloaded!' : 'Export Backup'}</span>
-          </button>
-        </div>
+        <Link
+          href="/settings#backup"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '9px 14px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            textDecoration: 'none',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          {exportSuccess ? <Check size={15} style={{ color: '#16a34a' }} /> : <ShieldCheck size={15} style={{ color: 'var(--accent-gold)' }} />}
+          <span>{exportSuccess ? 'Backup saved' : 'Backup & Restore'}</span>
+        </Link>
       </div>
 
-      {/* Import Feedback Toast */}
-      {importFeedback && (
-        <div className="card fade-in" style={{
-          padding: '12px 18px',
-          marginBottom: '16px',
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          color: '#15803d',
-          fontWeight: 600,
-          fontSize: '0.9rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <Check size={18} />
-          <span>{importFeedback}</span>
-        </div>
-      )}
-
-      {/* Multi-Device JSON Backup Reminder Banner */}
+      {/* Backup Reminder Banner (comes back 14 days after a backup or dismissal) */}
       {showReminder && totalItemsCount > 0 && (
         <div className="card fade-in" style={{
           padding: '16px 20px',
@@ -429,14 +269,14 @@ export default function SavedItems() {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Multi-Device Offline Backup Reminder
+                  Keep your notes safe
                 </h3>
                 <p style={{ margin: '4px 0 10px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: '560px' }}>
-                  You have <strong>{totalItemsCount} items</strong> stored in this browser. To sync across other phones, tablets, or protect against cache clearing, save an offline JSON backup.
+                  Your <strong>{totalItemsCount} {totalItemsCount === 1 ? 'item is' : 'items are'}</strong> saved only on this device. Back up to a file so you don't lose them if the browser is cleared, or to move them to another device.
                 </p>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <button
-                    onClick={handleExportBackup}
+                    onClick={handleBackupNow}
                     style={{
                       padding: '6px 14px',
                       borderRadius: 'var(--radius-sm)',
@@ -448,7 +288,7 @@ export default function SavedItems() {
                       cursor: 'pointer'
                     }}
                   >
-                    Backup Now (JSON)
+                    Back up now
                   </button>
                   <button
                     onClick={dismissReminder}
@@ -461,7 +301,7 @@ export default function SavedItems() {
                       padding: '4px 8px'
                     }}
                   >
-                    Remind me in 14 days
+                    Later
                   </button>
                 </div>
               </div>

@@ -425,3 +425,20 @@ html.font-xlarge {
   to { opacity: 1; transform: translateY(0); }
 }
 
+
+/* Briefly highlights a verse reached from a search result or shared link */
+.verse-flash {
+  animation: verse-flash 2.5s ease-out;
+}
+@keyframes verse-flash {
+  0%, 30% { background-color: var(--accent-gold-light); box-shadow: 0 0 0 6px var(--accent-gold-light); }
+  100% { background-color: transparent; box-shadow: 0 0 0 6px transparent; }
+}
+
+/* Matched words in search results */
+mark.search-hit {
+  background-color: var(--accent-gold-light);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}

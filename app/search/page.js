@@ -3,11 +3,31 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { offlineTranslations } from '../data/translations';
+import { ALL_BOOKS, normalizeBookName } from '../data/books';
 import { ArrowLeft, Search, Loader2 } from 'lucide-react';
+
+const MAX_RESULTS = 100;
+
+// Wraps every occurrence of the query in <mark> (case-insensitive)
+const highlightMatches = (text, q) => {
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <mark key={i} className="search-hit">{part}</mark> : part
+  );
+};
+
+const bookOrder = (name) => {
+  const idx = ALL_BOOKS.indexOf(normalizeBookName(name));
+  return idx === -1 ? ALL_BOOKS.length : idx;
+};
 
 export default function SearchPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const [searchedTranslation, setSearchedTranslation] = useState('kjv_offline');
   const [translation, setTranslation] = useState('kjv_offline');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,22 +35,24 @@ export default function SearchPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [offlineDataCache, setOfflineDataCache] = useState({});
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const runSearch = async (rawQuery, translationId) => {
+    const searchQuery = rawQuery.trim();
+    if (!searchQuery) return;
     
     setLoading(true);
     setError('');
     setHasSearched(true);
+    setSearchedQuery(searchQuery);
+    setSearchedTranslation(translationId);
     setResults([]);
     
     try {
-      let fileName = translation;
-      const configLang = offlineTranslations.find(t => t.id === translation);
+      let fileName = translationId;
+      const configLang = offlineTranslations.find(t => t.id === translationId);
       if (configLang) {
         fileName = configLang.filename;
-      } else if (translation.endsWith('_offline')) {
-        fileName = translation.replace('_offline', '');
+      } else if (translationId.endsWith('_offline')) {
+        fileName = translationId.replace('_offline', '');
       }
 
       let data = offlineDataCache[fileName];
@@ -53,64 +75,54 @@ export default function SearchPage() {
       }
 
       const searchResults = [];
-      const lowerQuery = query.toLowerCase();
+      const lowerQuery = searchQuery.toLowerCase();
+      const addResult = (bookName, chapter, verse, text) => {
+        const book = normalizeBookName(bookName);
+        if (!book) return;
+        searchResults.push({ book, chapter, verse, text: text.replace(/<[^>]*>?/gm, '') });
+      };
 
       // Handle new JSON format (Flat Array of Verses)
       if (data.verses && Array.isArray(data.verses)) {
         for (const verse of data.verses) {
           if (verse.text && verse.text.toLowerCase().includes(lowerQuery)) {
-            searchResults.push({
-              book: verse.book_name,
-              chapter: verse.chapter,
-              verse: verse.verse,
-              text: verse.text.replace(/<[^>]*>?/gm, '')
-            });
-            if (searchResults.length >= 100) break;
+            addResult(verse.book_name, verse.chapter, verse.verse, verse.text);
+            if (searchResults.length >= MAX_RESULTS) break;
           }
         }
       }
       // Handle older JSON format (Array of books)
       else if (data.books && Array.isArray(data.books)) {
-        for (const book of data.books) {
+        outer: for (const book of data.books) {
           for (const chapter of book.chapters) {
             for (const verse of chapter.verses) {
-              if (verse.text.toLowerCase().includes(lowerQuery)) {
-                searchResults.push({
-                  book: book.name,
-                  chapter: chapter.chapter,
-                  verse: verse.verse,
-                  text: verse.text.replace(/<[^>]*>?/gm, '')
-                });
-                if (searchResults.length >= 100) break; // Limit results
+              if (verse.text && verse.text.toLowerCase().includes(lowerQuery)) {
+                addResult(book.name, chapter.chapter, verse.verse, verse.text);
+                if (searchResults.length >= MAX_RESULTS) break outer;
               }
             }
-            if (searchResults.length >= 100) break;
           }
-          if (searchResults.length >= 100) break;
         }
       } 
-      // Handle original JSON format (Nested objects)
+      // Handle original JSON format (Nested objects) - keys aren't in Bible order, so sort them
       else {
-        for (const bookName in data) {
-          if (bookName === 'book' || bookName === 'count' || bookName === 'chapters') continue;
+        const bookNames = Object.keys(data)
+          .filter(name => name !== 'book' && name !== 'count' && name !== 'chapters')
+          .sort((a, b) => bookOrder(a) - bookOrder(b));
+        outer: for (const bookName of bookNames) {
           const bookData = data[bookName];
-          for (const chapNum in bookData) {
+          const chapNums = Object.keys(bookData).sort((a, b) => parseInt(a) - parseInt(b));
+          for (const chapNum of chapNums) {
             const chapData = bookData[chapNum];
-            for (const vNum in chapData) {
+            const verseNums = Object.keys(chapData).sort((a, b) => parseInt(a) - parseInt(b));
+            for (const vNum of verseNums) {
               const text = chapData[vNum];
               if (text && text.toLowerCase().includes(lowerQuery)) {
-                searchResults.push({
-                  book: bookName,
-                  chapter: chapNum,
-                  verse: vNum,
-                  text: text
-                });
-                if (searchResults.length >= 100) break;
+                addResult(bookName, chapNum, vNum, text);
+                if (searchResults.length >= MAX_RESULTS) break outer;
               }
             }
-            if (searchResults.length >= 100) break;
           }
-          if (searchResults.length >= 100) break;
         }
       }
 
@@ -121,6 +133,23 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Support links like /search?q=grace (used by the dictionary)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q && q.trim()) {
+      setQuery(q);
+      runSearch(q, translation);
+    }
+  }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    // Keep the query in the URL so Back from a result returns to the same search
+    window.history.replaceState(null, '', `/search?q=${encodeURIComponent(query.trim())}`);
+    runSearch(query, translation);
   };
 
   return (
@@ -201,25 +230,30 @@ export default function SearchPage() {
       {hasSearched && !loading && !error && (
         <div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            {results.length >= 100 ? 'Showing first 100 results' : `${results.length} Results Found`}
+            {results.length >= MAX_RESULTS ? `Showing first ${MAX_RESULTS} results` : `${results.length} ${results.length === 1 ? 'Result' : 'Results'} Found`}
           </h3>
-          
+
           {results.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
               <Search size={48} style={{ marginBottom: '16px', opacity: 0.5, margin: '0 auto' }} />
-              <p style={{ fontSize: '1.1rem' }}>No verses found containing "{query}"</p>
+              <p style={{ fontSize: '1.1rem' }}>No verses found containing "{searchedQuery}"</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {results.map((r, i) => (
-                <div key={i} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {results.map((r) => (
+                <Link
+                  key={`${r.book}-${r.chapter}-${r.verse}`}
+                  href={`/bible?book=${encodeURIComponent(r.book)}&chapter=${r.chapter}&verse=${r.verse}&translation=${searchedTranslation}`}
+                  className="card"
+                  style={{ display: 'flex', flexDirection: 'column', gap: '8px', textDecoration: 'none' }}
+                >
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     {r.book} {r.chapter}:{r.verse}
                   </span>
                   <p style={{ fontSize: '1.1rem', lineHeight: 1.5, margin: 0, color: 'var(--text-primary)' }}>
-                    {r.text}
+                    {highlightMatches(r.text, searchedQuery)}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

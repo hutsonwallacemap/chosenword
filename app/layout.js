@@ -4,6 +4,18 @@ export const metadata = {
   title: 'Chosen Word',
   description: 'A modern, beautiful, and offline-ready Bible application.',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Chosen Word',
+    statusBarStyle: 'default',
+  },
+};
+
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
 };
 
 import Header from './components/Header';
