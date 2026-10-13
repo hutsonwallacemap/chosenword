@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { BookOpen, Sun, Moon } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Sun, Moon, Settings } from 'lucide-react';
 import { applyTheme, getCurrentTheme, THEME_EVENT } from '../lib/theme';
 
 export default function Header() {
@@ -60,14 +61,19 @@ export default function Header() {
           Chosen Word
         </h1>
       </div>
-      <button
-        onClick={toggleTheme}
-        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        className="icon-btn"
-      >
-        {isDark ? <Sun size={18} strokeWidth={2.5} aria-hidden="true" /> : <Moon size={18} strokeWidth={2.5} aria-hidden="true" />}
-      </button>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={toggleTheme}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="icon-btn"
+        >
+          {isDark ? <Sun size={18} strokeWidth={2.5} aria-hidden="true" /> : <Moon size={18} strokeWidth={2.5} aria-hidden="true" />}
+        </button>
+        <Link href="/settings" aria-label="Settings" title="Settings" className="icon-btn">
+          <Settings size={18} strokeWidth={2.5} aria-hidden="true" />
+        </Link>
+      </div>
     </header>
   );
 }

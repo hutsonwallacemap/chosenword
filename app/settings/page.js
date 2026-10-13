@@ -17,20 +17,22 @@ import {
 } from 'lucide-react';
 import { applyTheme, getCurrentTheme, THEME_EVENT } from '../lib/theme';
 import { getDataSummary, downloadBackup, restoreBackup, eraseAllUserData, describeRestore } from '../lib/backup';
+import { countSermons } from '../lib/sermonStore';
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState('light');
   const [fontSize, setFontSize] = useState('medium');
-  const [summary, setSummary] = useState({ highlights: 0, notes: 0, bookmarks: 0, lastBackup: null });
+  const [summary, setSummary] = useState({ highlights: 0, notes: 0, bookmarks: 0, sermons: 0, lastBackup: null });
   const [exportSuccess, setExportSuccess] = useState(false);
   // { type: 'success' | 'error', text }
   const [backupMessage, setBackupMessage] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const refreshSummary = () => {
+  const refreshSummary = async () => {
     try {
-      setSummary(getDataSummary());
+      const sermons = await countSermons().catch(() => 0);
+      setSummary({ ...getDataSummary(), sermons });
     } catch (e) {
       console.error('Could not read saved data', e);
     }
@@ -70,9 +72,9 @@ export default function SettingsPage() {
     }
   };
 
-  const handleBackup = () => {
+  const handleBackup = async () => {
     try {
-      downloadBackup();
+      await downloadBackup();
       refreshSummary();
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
@@ -87,9 +89,9 @@ export default function SettingsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const counts = restoreBackup(e.target.result);
+        const counts = await restoreBackup(e.target.result);
         refreshSummary();
         showBackupMessage('success', describeRestore(counts));
       } catch (err) {
@@ -100,12 +102,12 @@ export default function SettingsPage() {
     reader.readAsText(file);
   };
 
-  const handleEraseAll = () => {
+  const handleEraseAll = async () => {
     const confirmed = window.confirm(
-      'Erase all your highlights, notes, bookmarks, reading-plan progress, streaks and quiz answers from this device?\n\nThis cannot be undone. Back up first if you might want them later.'
+      'Erase all your highlights, notes, sermons, bookmarks, reading-plan progress, streaks and quiz answers from this device?\n\nThis cannot be undone. Back up first if you might want them later.'
     );
     if (!confirmed) return;
-    eraseAllUserData();
+    await eraseAllUserData();
     refreshSummary();
     showBackupMessage('success', 'All your data has been erased from this device.');
   };
@@ -216,15 +218,16 @@ export default function SettingsPage() {
         </h2>
 
         <p style={{ margin: '0 0 16px', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Your highlights, notes and bookmarks are saved only on this device. Back them up to a file to keep them safe, or to move them to another phone or computer.
+          Your highlights, notes, sermons and bookmarks are saved only on this device. Back them up to a file to keep them safe, or to move them to another phone or computer.
         </p>
 
         {/* What will be backed up */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           {[
             { label: 'Highlights', value: summary.highlights, color: 'var(--accent-gold)' },
             { label: 'Notes', value: summary.notes, color: 'var(--accent-purple)' },
             { label: 'Bookmarks', value: summary.bookmarks, color: 'var(--accent-blue)' },
+            { label: 'Sermons', value: summary.sermons, color: 'var(--accent-gold-text)' },
           ].map(stat => (
             <div key={stat.label} style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{stat.label}</div>
@@ -322,7 +325,7 @@ export default function SettingsPage() {
         <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>Erase all my data</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Removes highlights, notes, bookmarks, plan progress and streaks. Theme and text size are kept.</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Removes highlights, notes, sermons, bookmarks, plan progress and streaks. Theme and text size are kept.</div>
           </div>
           <button
             onClick={handleEraseAll}

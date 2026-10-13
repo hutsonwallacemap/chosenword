@@ -2,6 +2,8 @@
 // All data lives in this browser's localStorage, so a backup file is the only
 // way to keep it safe or move it to another device.
 
+import { getAllSermonsForBackup, importSermons, clearAllSermons } from './sermonStore';
+
 const PLAN_IDS = ['30day', '6month', '1year'];
 const LAST_BACKUP_KEY = 'cw_last_backup';
 const REMINDER_KEY = 'cw_backup_reminder_dismissed';
@@ -38,7 +40,7 @@ export const getDataSummary = () => {
   };
 };
 
-export const downloadBackup = () => {
+export const downloadBackup = async () => {
   const readingPlans = {};
   PLAN_IDS.forEach(id => {
     const progress = readJSON(`cw_plan_${id}`, {});
@@ -56,6 +58,7 @@ export const downloadBackup = () => {
       chapterNotes: readJSON('cw_chapter_notes', {}),
       bookNotes: readJSON('cw_book_notes', {}),
       readingPlans,
+      sermons: await getAllSermonsForBackup(),
     },
   };
 
@@ -76,7 +79,7 @@ export const downloadBackup = () => {
 
 // Merges a backup file into what is already on this device (nothing is overwritten
 // except notes for the same verse/chapter/book). Returns counts of what was restored.
-export const restoreBackup = (fileText) => {
+export const restoreBackup = async (fileText) => {
   let json;
   try {
     json = JSON.parse(fileText);
@@ -88,7 +91,7 @@ export const restoreBackup = (fileText) => {
     throw new Error("This file isn't a Chosen Word backup.");
   }
 
-  const counts = { highlights: 0, bookmarks: 0, notes: 0, plans: 0 };
+  const counts = { highlights: 0, bookmarks: 0, notes: 0, plans: 0, sermons: 0 };
   let recognised = false;
 
   if (Array.isArray(data.savedVerses)) {
@@ -128,28 +131,35 @@ export const restoreBackup = (fileText) => {
     });
   }
 
+  if (Array.isArray(data.sermons)) {
+    recognised = true;
+    counts.sermons = await importSermons(data.sermons);
+  }
+
   if (!recognised) {
     throw new Error("This file isn't a Chosen Word backup.");
   }
   return counts;
 };
 
-// Removes every highlight, note, bookmark, plan, quiz, streak and reading position.
-export const eraseAllUserData = () => {
+// Removes every highlight, note, bookmark, plan, quiz, streak, reading position and sermon.
+export const eraseAllUserData = async () => {
   const keys = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith('cw_') && !PRESERVED_KEYS.includes(key)) keys.push(key);
   }
   keys.forEach(key => localStorage.removeItem(key));
+  await clearAllSermons();
 };
 
-export const describeRestore = ({ highlights, bookmarks, notes, plans }) => {
+export const describeRestore = ({ highlights, bookmarks, notes, plans, sermons }) => {
   const parts = [];
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   if (highlights) parts.push(plural(highlights, 'highlight'));
   if (notes) parts.push(plural(notes, 'note'));
   if (bookmarks) parts.push(plural(bookmarks, 'bookmark'));
   if (plans) parts.push(plural(plans, 'reading plan'));
+  if (sermons) parts.push(plural(sermons, 'sermon'));
   return parts.length ? `Restored ${parts.join(', ')}.` : 'Backup restored. It was empty, so nothing new was added.';
 };

@@ -5,87 +5,10 @@ import { bookSummaries } from '../data/bookSummaries';
 import { lookupBiblicalWord } from '../data/biblicalDictionary';
 import { ALL_BOOKS, CHAPTER_COUNTS, normalizeBookName } from '../data/books';
 import { renderRedLetter, stripRedLetterMarks } from '../lib/verseText';
-import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked } from 'lucide-react';
-
-// Helper: generate all possible name variants for a book
-const getBookNameVariants = (name) => {
-  if (!name) return [];
-  const variants = new Set([name]);
-  // "1 Samuel" <-> "I Samuel", "2 Kings" <-> "II Kings", "3 John" <-> "III John"
-  if (/^1\s+/.test(name)) variants.add(name.replace(/^1\s+/, 'I '));
-  if (/^2\s+/.test(name)) variants.add(name.replace(/^2\s+/, 'II '));
-  if (/^3\s+/.test(name)) variants.add(name.replace(/^3\s+/, 'III '));
-  if (/^I\s+/.test(name) && !/^II/.test(name) && !/^III/.test(name)) variants.add(name.replace(/^I\s+/, '1 '));
-  if (/^II\s+/.test(name) && !/^III/.test(name)) variants.add(name.replace(/^II\s+/, '2 '));
-  if (/^III\s+/.test(name)) variants.add(name.replace(/^III\s+/, '3 '));
-
-  if (name.includes('Revelation')) {
-    variants.add('Revelation');
-    variants.add('Revelation of John');
-    variants.add('The Revelation of St. John');
-    variants.add('Revelation of St. John');
-    variants.add('The Revelation');
-  }
-  if (name.includes('Song of Solomon') || name.includes('Song of Songs')) {
-    variants.add('Song of Solomon');
-    variants.add('Song of Songs');
-    variants.add('Canticles');
-    variants.add('Song of Songs of Solomon');
-  }
-  if (name.includes('Psalm')) {
-    variants.add('Psalms');
-    variants.add('Psalm');
-  }
-  return Array.from(variants);
-};
-
-// Helper: find a book in a list by trying all name variants
-const findBookInData = (booksList, bookName) => {
-  if (!booksList || !Array.isArray(booksList)) return null;
-  const variants = getBookNameVariants(bookName);
-  for (const variant of variants) {
-    const found = booksList.find(b => b && b.name === variant);
-    if (found) return found;
-  }
-  const lowerVariants = variants.map(v => v.toLowerCase());
-  return booksList.find(b => b && b.name && lowerVariants.includes(b.name.toLowerCase())) || null;
-};
-
-// Finds one verse's text in any of the translation file formats, or '' if it isn't there
-const findVerseText = (data, book, chapter, verseNum) => {
-  const chapterStr = chapter.toString();
-  const verseStr = verseNum.toString();
-  const variants = getBookNameVariants(book);
-  const clean = (text) => (text || '').replace(/<[^>]*>?/gm, '');
-
-  // Flat verses array (e.g. kjv.json, net.json)
-  if (data.verses && Array.isArray(data.verses)) {
-    const v = data.verses.find(v =>
-      variants.includes(v.book_name) && v.chapter.toString() === chapterStr && v.verse.toString() === verseStr
-    );
-    return clean(v?.text);
-  }
-
-  // Books array (e.g. AKJV.json, BBE.json) or a root array of books
-  const booksList = data.books && Array.isArray(data.books) ? data.books : Array.isArray(data) ? data : null;
-  if (booksList) {
-    const bookData = findBookInData(booksList, book);
-    const chapterData = (bookData?.chapters || []).find(c =>
-      (c.chapter || c.name || '').toString() === chapterStr || c.chapter === parseInt(chapter)
-    );
-    const v = (chapterData?.verses || []).find(v => v.verse.toString() === verseStr);
-    return clean(v?.text);
-  }
-
-  // Nested objects { book: { chapter: { verse: text } } } (e.g. hindi_offline.json)
-  const keys = Object.keys(data);
-  for (const variant of variants) {
-    const key = data[variant] ? variant : keys.find(k => k.toLowerCase() === variant.toLowerCase());
-    const chapterData = key && data[key] && data[key][chapterStr];
-    if (chapterData) return clean(chapterData[verseStr]);
-  }
-  return '';
-};
+import { bibleDataCache, fetchTranslationData, findVerseText, getChapterVerses, translationFilename } from '../lib/bibleData';
+import AddToSermon from '../components/AddToSermon';
+import Link from 'next/link';
+import { Bookmark, Volume2, Loader2, AlertCircle, FileText, Highlighter, Copy, BookOpen, Share2, Edit3, X, VolumeX, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Sparkles, Check, GraduationCap, BookA, Search, BookMarked, NotebookPen } from 'lucide-react';
 
 // Reads a JSON value from localStorage without crashing on missing or corrupted data
 const readStoredJSON = (key, fallback) => {
@@ -105,38 +28,6 @@ const activateOnKey = (e, action) => {
   }
 };
 
-// In-memory cache for loaded translation JSONs
-const bibleDataCache = {};
-
-const fetchTranslationData = async (filename) => {
-  if (bibleDataCache[filename]) return bibleDataCache[filename];
-
-  // Try exact, uppercase, and lowercase filenames to handle case-sensitive Linux servers
-  const candidates = [filename, filename.toUpperCase(), filename.toLowerCase()];
-  const tried = new Set();
-  let res = null;
-
-  for (const name of candidates) {
-    if (tried.has(name)) continue;
-    tried.add(name);
-    try {
-      res = await fetch(`/${name}.json`);
-      if (res.ok) break;
-    } catch (e) {
-      // Continue trying next candidate
-    }
-  }
-
-  if (!res || !res.ok) {
-    throw new Error(`Failed to load Bible translation (${filename})`);
-  }
-
-  const rawText = await res.text();
-  const data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
-  bibleDataCache[filename] = data;
-  return data;
-};
-
 export default function BibleReader() {
   const [book, setBook] = useState('Genesis');
   const [chapter, setChapter] = useState(1);
@@ -153,6 +44,8 @@ export default function BibleReader() {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [compareModal, setCompareModal] = useState({ isOpen: false, ref: '', items: [] });
   const compareSessionRef = useRef(null);
+  const [addToSermon, setAddToSermon] = useState(null); // { verses: [{ n, text }] } while the picker is open
+  const [sermonToast, setSermonToast] = useState(null); // { id, title } after verses are added
   const [verseNotes, setVerseNotes] = useState({});
   const [noteModal, setNoteModal] = useState({ isOpen: false, verseRef: '', text: '' });
   const [dictionaryModal, setDictionaryModal] = useState({
@@ -297,83 +190,8 @@ export default function BibleReader() {
 
         // Helper to get verses from offline JSON
         const getVerses = async (lang) => {
-            let baseFilename = lang.replace('_offline', '');
-            const configLang = offlineTranslations.find(t => t.id === lang);
-            if (configLang) {
-              baseFilename = configLang.filename;
-            }
-            
-            const data = await fetchTranslationData(baseFilename);
-
-            // Handle flat verses array format (e.g. kjv.json, net.json, bishops.json)
-            if (data.verses && Array.isArray(data.verses)) {
-              const variants = getBookNameVariants(book);
-              const chapterVerses = data.verses.filter(v => 
-                variants.includes(v.book_name) && 
-                v.chapter.toString() === chapter.toString()
-              );
-              if (chapterVerses.length === 0) throw new Error('Chapter not found');
-              return chapterVerses.map(v => ({
-                verseNum: parseInt(v.verse),
-                text: (v.text || '').replace(/<[^>]*>?/gm, '')
-              }));
-            }
-            // Handle books array format (e.g. AKJV.json, BBE.json, ASV.json)
-            else if (data.books && Array.isArray(data.books)) {
-              const bookData = findBookInData(data.books, book);
-              if (!bookData) throw new Error('Book not found');
-              const chapterData = bookData.chapters.find(c => 
-                (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
-              );
-              if (!chapterData) throw new Error('Chapter not found');
-              
-              return (chapterData.verses || []).map(v => ({ 
-                verseNum: parseInt(v.verse), 
-                text: (v.text || '').replace(/<[^>]*>?/gm, '') 
-              }));
-            } 
-            // Handle root array of books
-            else if (Array.isArray(data)) {
-              const bookData = findBookInData(data, book);
-              if (!bookData) throw new Error('Book not found');
-              const chapterData = (bookData.chapters || []).find(c => 
-                (c.chapter || c.name || '').toString() === chapter.toString() || c.chapter === parseInt(chapter)
-              );
-              if (!chapterData) throw new Error('Chapter not found');
-              
-              return (chapterData.verses || []).map(v => ({ 
-                verseNum: parseInt(v.verse), 
-                text: (v.text || '').replace(/<[^>]*>?/gm, '') 
-              }));
-            }
-            // Handle key-value object format (e.g. hindi_offline.json, ta_offline.json)
-            else {
-              const variants = getBookNameVariants(book);
-              let chapterData = null;
-              for (const variant of variants) {
-                if (data[variant] && data[variant][chapter]) {
-                  chapterData = data[variant][chapter];
-                  break;
-                }
-              }
-              if (!chapterData) {
-                const keys = Object.keys(data);
-                for (const variant of variants) {
-                  const matchedKey = keys.find(k => k.toLowerCase() === variant.toLowerCase());
-                  if (matchedKey && data[matchedKey] && data[matchedKey][chapter]) {
-                    chapterData = data[matchedKey][chapter];
-                    break;
-                  }
-                }
-              }
-              if (!chapterData) throw new Error('Chapter not found');
-              
-              let fetched = [];
-              for (let v in chapterData) {
-                fetched.push({ verseNum: parseInt(v), text: (chapterData[v] || '').replace(/<[^>]*>?/gm, '') });
-              }
-              return fetched;
-            }
+          const data = await fetchTranslationData(translationFilename(lang));
+          return getChapterVerses(data, book, chapter);
         };
 
         // Fetch primary translation
@@ -609,6 +427,17 @@ export default function BibleReader() {
     setVerseNotes(newNotes);
     localStorage.setItem('cw_notes', JSON.stringify(newNotes));
     setNoteModal({ isOpen: false, verseRef: '', text: '' });
+    handleClearSelection();
+  };
+
+  // Sends the selected verses (in the primary translation) to a sermon
+  const handleAddToSermon = () => {
+    const nums = [...new Set((selectedVerses.length ? selectedVerses : [selectedVerse]).filter(Boolean).map(sv => parseInt(sv.verseNum)))];
+    const picked = verses
+      .filter(v => nums.includes(parseInt(v.verseNum)))
+      .map(v => ({ n: parseInt(v.verseNum), text: v.primaryText }));
+    if (picked.length === 0) return;
+    setAddToSermon({ verses: picked });
     handleClearSelection();
   };
 
@@ -1472,6 +1301,15 @@ export default function BibleReader() {
                 <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Compare</span>
               </button>
 
+              <button
+                onClick={handleAddToSermon}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+                title="Add to sermon"
+              >
+                <NotebookPen size={19} aria-hidden="true" />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>Sermon</span>
+              </button>
+
               <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
 
               <button 
@@ -1503,6 +1341,28 @@ export default function BibleReader() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add to sermon */}
+      {addToSermon && (
+        <AddToSermon
+          book={book}
+          chapter={chapter}
+          verses={addToSermon.verses}
+          translationId={primaryLang}
+          onClose={() => setAddToSermon(null)}
+          onAdded={(sermon) => {
+            setAddToSermon(null);
+            setSermonToast({ id: sermon.id, title: sermon.title || 'Untitled sermon' });
+            setTimeout(() => setSermonToast(null), 5000);
+          }}
+        />
+      )}
+      {sermonToast && (
+        <div role="status" style={{ position: 'fixed', bottom: '96px', left: '50%', transform: 'translateX(-50%)', zIndex: 2100, display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--text-primary)', color: 'var(--bg-primary)', padding: '10px 10px 10px 18px', borderRadius: '99px', fontSize: '0.88rem', fontWeight: 600, maxWidth: 'calc(100% - 32px)' }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Added to {sermonToast.title}</span>
+          <Link href={`/sermons/edit?id=${sermonToast.id}`} style={{ color: 'var(--bg-primary)', textDecoration: 'underline', whiteSpace: 'nowrap', padding: '6px 8px' }}>Open</Link>
         </div>
       )}
 

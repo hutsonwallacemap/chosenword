@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, GraduationCap, Bookmark, Settings } from 'lucide-react';
+import { Home, BookOpen, GraduationCap, Bookmark, NotebookPen } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -12,7 +12,8 @@ export default function BottomNav() {
     // Dictionary, Calendar and Maps are opened from the Study hub
     { name: 'Study', path: '/study', Icon: GraduationCap, also: ['/dictionary', '/calendar', '/places'] },
     { name: 'Saved', path: '/saved', Icon: Bookmark },
-    { name: 'Settings', path: '/settings', Icon: Settings },
+    // Settings moved to the header gear so the bar stays at five tabs
+    { name: 'Sermons', path: '/sermons', Icon: NotebookPen, also: ['/sermons/'] },
   ];
 
   return (

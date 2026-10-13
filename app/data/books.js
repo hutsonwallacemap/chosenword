@@ -42,3 +42,52 @@ export const normalizeBookName = (name) => {
   const lower = n.toLowerCase();
   return ALL_BOOKS.find(b => b.toLowerCase() === lower) || null;
 };
+
+// Short forms that a plain prefix match would get wrong or miss
+const BOOK_ABBREVIATIONS = {
+  gn: 'Genesis', ex: 'Exodus', lv: 'Leviticus', nm: 'Numbers', dt: 'Deuteronomy',
+  jdg: 'Judges', jdgs: 'Judges', rth: 'Ruth',
+  '1kgs': '1 Kings', '2kgs': '2 Kings', '1sm': '1 Samuel', '2sm': '2 Samuel',
+  ps: 'Psalms', psa: 'Psalms', psalm: 'Psalms', pss: 'Psalms', prv: 'Proverbs',
+  sos: 'Song of Solomon', sng: 'Song of Solomon', songofsongs: 'Song of Solomon', canticles: 'Song of Solomon',
+  mt: 'Matthew', mk: 'Mark', mrk: 'Mark', lk: 'Luke', jn: 'John', jhn: 'John',
+  '1jn': '1 John', '2jn': '2 John', '3jn': '3 John',
+  jas: 'James', phm: 'Philemon', philem: 'Philemon', php: 'Philippians',
+};
+
+// Book ids with spaces removed, in Bible order: "1corinthians", "songofsolomon", ...
+const BOOK_KEYS = ALL_BOOKS.map(b => ({ book: b, key: b.toLowerCase().replace(/\s+/g, '') }));
+
+// Turns "Jn 3:16", "1 Cor 13:4-7", "I John 1", "Psalm 23" into
+// { book, chapter, verseStart, verseEnd } (verses null = whole chapter), or null if it can't.
+export const parseReference = (input) => {
+  if (!input) return null;
+  const text = input.trim().toLowerCase()
+    .replace(/[–—]/g, '-')
+    .replace(/^(iii|3rd|third)\s+/, '3 ')
+    .replace(/^(ii|2nd|second)\s+/, '2 ')
+    .replace(/^(i|1st|first)\s+/, '1 ');
+  const match = text.match(/^([1-3]?\s*[a-z][a-z.\s]*?)\s*(\d+)(?:\s*[:.]\s*(\d+)(?:\s*-\s*(\d+))?)?\s*$/);
+  if (!match) return null;
+
+  const token = match[1].replace(/[.\s]/g, '');
+  const book = BOOK_ABBREVIATIONS[token]
+    || BOOK_KEYS.find(b => b.key === token)?.book
+    || (token.replace(/^\d/, '').length >= 2 ? BOOK_KEYS.find(b => b.key.startsWith(token))?.book : null);
+  if (!book) return null;
+
+  const chapter = parseInt(match[2]);
+  if (chapter < 1 || chapter > (CHAPTER_COUNTS[book] || 1)) return null;
+
+  const verseStart = match[3] ? parseInt(match[3]) : null;
+  let verseEnd = match[4] ? parseInt(match[4]) : verseStart;
+  if (verseStart !== null && verseEnd < verseStart) verseEnd = verseStart;
+  return { book, chapter, verseStart, verseEnd };
+};
+
+export const formatReference = ({ book, chapter, verseStart, verseEnd }) => {
+  if (!verseStart) return `${book} ${chapter}`;
+  return verseEnd && verseEnd !== verseStart
+    ? `${book} ${chapter}:${verseStart}-${verseEnd}`
+    : `${book} ${chapter}:${verseStart}`;
+};

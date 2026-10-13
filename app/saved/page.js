@@ -93,9 +93,9 @@ export default function SavedItems() {
   };
 
   // One-tap backup from the reminder banner (full Backup & Restore is in Settings)
-  const handleBackupNow = () => {
+  const handleBackupNow = async () => {
     try {
-      downloadBackup();
+      await downloadBackup();
       setShowReminder(false);
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3500);
