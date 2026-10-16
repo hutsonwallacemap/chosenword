@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { offlineTranslations } from '../data/translations';
+import { fetchTranslationData, translationFilename } from '../lib/bibleData';
 import { ALL_BOOKS, normalizeBookName } from '../data/books';
 import { stripRedLetterMarks } from '../lib/verseText';
 import { ArrowLeft, Search, Loader2 } from 'lucide-react';
@@ -34,7 +35,6 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
-  const [offlineDataCache, setOfflineDataCache] = useState({});
 
   const runSearch = async (rawQuery, translationId) => {
     const searchQuery = rawQuery.trim();
@@ -48,32 +48,8 @@ export default function SearchPage() {
     setResults([]);
     
     try {
-      let fileName = translationId;
-      const configLang = offlineTranslations.find(t => t.id === translationId);
-      if (configLang) {
-        fileName = configLang.filename;
-      } else if (translationId.endsWith('_offline')) {
-        fileName = translationId.replace('_offline', '');
-      }
-
-      let data = offlineDataCache[fileName];
-      if (!data) {
-        const candidates = [fileName, fileName.toUpperCase(), fileName.toLowerCase()];
-        const tried = new Set();
-        let res = null;
-        for (const name of candidates) {
-          if (tried.has(name)) continue;
-          tried.add(name);
-          try {
-            res = await fetch(`/${name}.json`);
-            if (res.ok) break;
-          } catch (e) {}
-        }
-        if (!res || !res.ok) throw new Error('Failed to load Bible database');
-        const rawText = await res.text();
-        data = JSON.parse(rawText.replace(/^\uFEFF/, ''));
-        setOfflineDataCache(prev => ({ ...prev, [fileName]: data }));
-      }
+      // Shared loader: one request per translation, cached for the reader and later searches
+      const data = await fetchTranslationData(translationFilename(translationId));
 
       const searchResults = [];
       const lowerQuery = searchQuery.toLowerCase();

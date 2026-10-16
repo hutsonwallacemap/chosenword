@@ -24,6 +24,7 @@ export const viewport = {
 
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
+import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
 
 export default function RootLayout({ children }) {
   return (
@@ -54,6 +55,7 @@ export default function RootLayout({ children }) {
           {children}
         </main>
         <BottomNav />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

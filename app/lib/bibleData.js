@@ -105,23 +105,15 @@ export const bibleDataCache = {};
 export const fetchTranslationData = async (filename) => {
   if (bibleDataCache[filename]) return bibleDataCache[filename];
 
-  // Try exact, uppercase, and lowercase filenames to handle case-sensitive Linux servers
-  const candidates = [filename, filename.toUpperCase(), filename.toLowerCase()];
-  const tried = new Set();
-  let res = null;
-
-  for (const name of candidates) {
-    if (tried.has(name)) continue;
-    tried.add(name);
-    try {
-      res = await fetch(`/${name}.json`);
-      if (res.ok) break;
-    } catch (e) {
-      // Continue trying next candidate
-    }
+  // All translation files are lowercase (public/kjv.json, ...), so one request is enough
+  let res;
+  try {
+    res = await fetch(`/${filename.toLowerCase()}.json`);
+  } catch (e) {
+    // No connection and this translation hasn't been saved on the device yet
+    throw new Error("This translation isn't saved for offline reading yet. Connect to the internet and open it once to save it.");
   }
-
-  if (!res || !res.ok) {
+  if (!res.ok) {
     throw new Error(`Failed to load Bible translation (${filename})`);
   }
 

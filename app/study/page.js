@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { bookSummaries } from '../data/bookSummaries';
+import { bookIndex } from '../data/bookIndex';
+import { useBookSummary } from '../lib/bookDetails';
 import { 
   GraduationCap, 
   Search, 
@@ -51,6 +52,7 @@ function parseVerseRef(ref) {
 export default function StudyNotesPage() {
   const [activeTab, setActiveTab] = useState('browse'); // 'browse' or 'notes'
   const [selectedBook, setSelectedBook] = useState(null);
+  const selectedSummary = useBookSummary(selectedBook);
   const [testamentFilter, setTestamentFilter] = useState('all'); // 'all', 'ot', 'nt'
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -155,7 +157,7 @@ export default function StudyNotesPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(b => {
-        const info = bookSummaries[b];
+        const info = bookIndex[b];
         if (b.toLowerCase().includes(q)) return true;
         if (info?.author?.toLowerCase().includes(q)) return true;
         if (info?.keyThemes?.some(t => t.toLowerCase().includes(q))) return true;
@@ -358,7 +360,7 @@ export default function StudyNotesPage() {
           </div>
 
           {/* Book Header Card */}
-          {bookSummaries[selectedBook] && (
+          {selectedSummary && (
             <>
               <div className="study-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
@@ -372,37 +374,37 @@ export default function StudyNotesPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {bookSummaries[selectedBook].author && (
+                    {selectedSummary.author && (
                       <span className="badge badge-blue">
-                        Author: {bookSummaries[selectedBook].author}
+                        Author: {selectedSummary.author}
                       </span>
                     )}
-                    {bookSummaries[selectedBook].chapters && (
+                    {selectedSummary.chapterCount > 0 && (
                       <span className="badge badge-gold">
-                        {Object.keys(bookSummaries[selectedBook].chapters).length} Chapters
+                        {selectedSummary.chapterCount} Chapters
                       </span>
                     )}
                   </div>
                 </div>
 
-                {bookSummaries[selectedBook].writtenTo && (
+                {selectedSummary.writtenTo && (
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', margin: '0 0 12px', fontWeight: 500 }}>
-                    <strong style={{ color: 'var(--text-secondary)' }}>Audience:</strong> {bookSummaries[selectedBook].writtenTo}
+                    <strong style={{ color: 'var(--text-secondary)' }}>Audience:</strong> {selectedSummary.writtenTo}
                   </p>
                 )}
 
                 <p style={{ fontSize: '1rem', lineHeight: 1.6, color: 'var(--text-primary)', margin: 0 }}>
-                  {bookSummaries[selectedBook].summary}
+                  {selectedSummary.summary}
                 </p>
 
                 {/* Key Themes Badges */}
-                {bookSummaries[selectedBook].keyThemes && (
+                {selectedSummary.keyThemes && (
                   <div style={{ marginTop: '16px' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
                       Major Themes
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {bookSummaries[selectedBook].keyThemes.map((theme, i) => (
+                      {selectedSummary.keyThemes.map((theme, i) => (
                         <span key={i} className="theme-tag">
                           {theme}
                         </span>
@@ -413,13 +415,13 @@ export default function StudyNotesPage() {
               </div>
 
               {/* Key Verses Section */}
-              {bookSummaries[selectedBook].keyVerses && bookSummaries[selectedBook].keyVerses.length > 0 && (
+              {selectedSummary.keyVerses && selectedSummary.keyVerses.length > 0 && (
                 <div className="card" style={{ padding: '20px' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Sparkles size={18} style={{ color: 'var(--accent-gold)' }} /> Key Verses
                   </h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {bookSummaries[selectedBook].keyVerses.map((ref, idx) => {
+                    {selectedSummary.keyVerses.map((ref, idx) => {
                       const { book, chapter } = parseVerseRef(ref);
                       return (
                         <Link
@@ -448,13 +450,13 @@ export default function StudyNotesPage() {
               )}
 
               {/* Important Teaching Points */}
-              {bookSummaries[selectedBook].importantNotes && bookSummaries[selectedBook].importantNotes.length > 0 && (
+              {selectedSummary.importantNotes && selectedSummary.importantNotes.length > 0 && (
                 <div className="card" style={{ padding: '20px' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <GraduationCap size={18} style={{ color: 'var(--accent-blue)' }} /> Important Teaching Points
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {bookSummaries[selectedBook].importantNotes.map((note, idx) => (
+                    {selectedSummary.importantNotes.map((note, idx) => (
                       <div key={idx} style={{
                         display: 'flex',
                         alignItems: 'flex-start',
@@ -533,14 +535,14 @@ export default function StudyNotesPage() {
               </div>
 
               {/* Chapter-by-Chapter Guide */}
-              {bookSummaries[selectedBook].chapters && (
+              {selectedSummary.chapters && (
                 <div style={{ marginTop: '8px' }}>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <BookOpen size={20} style={{ color: 'var(--accent-blue)' }} /> Chapter Summaries
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {Object.entries(bookSummaries[selectedBook].chapters).map(([chNum, summaryText]) => {
+                    {Object.entries(selectedSummary.chapters).map(([chNum, summaryText]) => {
                       const chapterRef = `${selectedBook} ${chNum}`;
                       const hasNote = !!chapterNotes[chapterRef];
                       const isEditing = activeChapterNoteEditor === chNum;
@@ -763,7 +765,7 @@ export default function StudyNotesPage() {
           {/* Book Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px', marginTop: '4px' }}>
             {filteredBooks.map(bookName => {
-              const info = bookSummaries[bookName];
+              const info = bookIndex[bookName];
               const isOT = OLD_TESTAMENT_BOOKS.includes(bookName);
               const hasBookNote = !!bookNotes[bookName];
               
@@ -786,7 +788,7 @@ export default function StudyNotesPage() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                       <span className={`badge ${isOT ? 'badge-purple' : 'badge-blue'}`}>
-                        {isOT ? 'OT' : 'NT'} • {info?.chapters ? Object.keys(info.chapters).length : ''} Ch
+                        {isOT ? 'OT' : 'NT'} • {info?.chapterCount || ''} Ch
                       </span>
                       
                       <div style={{ display: 'flex', gap: '4px' }}>

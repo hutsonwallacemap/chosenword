@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { offlineTranslations, getTtsLanguage } from '../data/translations';
-import { bookSummaries } from '../data/bookSummaries';
-import { lookupBiblicalWord } from '../data/biblicalDictionary';
+import { useBookSummary } from '../lib/bookDetails';
 import { ALL_BOOKS, CHAPTER_COUNTS, normalizeBookName } from '../data/books';
 import { renderRedLetter, stripRedLetterMarks } from '../lib/verseText';
 import { bibleDataCache, fetchTranslationData, findVerseText, getChapterVerses, translationFilename } from '../lib/bibleData';
@@ -59,6 +58,8 @@ export default function BibleReader() {
   });
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  // Wait for the saved/linked book so Genesis details aren't fetched first
+  const bookSummary = useBookSummary(isReady ? book : null);
   const [targetVerse, setTargetVerse] = useState(null);
 
   // Study summary and chapter notes state
@@ -219,7 +220,7 @@ export default function BibleReader() {
       } catch (err) {
         if (cancelled) return;
         console.error("Fetch Error:", err);
-        setError(`Failed: ${err.message}`);
+        setError(err.message);
         setVerses([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -502,7 +503,8 @@ export default function BibleReader() {
     const cleanWord = rawWord.toLowerCase().replace(/[^a-z]/g, '').trim();
     if (!cleanWord) return;
 
-    // 1. Instant check in local biblical dictionary (0ms latency, 100% offline-ready)
+    // 1. Local biblical dictionary (offline-ready). Loaded on first use so it isn't part of the page bundle.
+    const { lookupBiblicalWord } = await import('../data/biblicalDictionary');
     const local = lookupBiblicalWord(cleanWord);
     if (local) {
       setDictionaryModal(prev => ({
@@ -747,7 +749,7 @@ export default function BibleReader() {
           </h2>
 
           {/* Inline Book & Chapter Study Card */}
-          {bookSummaries[book] && (
+          {bookSummary && (
             <div className="chapter-summary-bar" style={{ marginBottom: '36px' }}>
               {/* Header / Toggle Row */}
               <div 
@@ -788,7 +790,7 @@ export default function BibleReader() {
                         </span>
                       )}
                     </div>
-                    {!isSummaryExpanded && bookSummaries[book].chapters?.[chapter] && (
+                    {!isSummaryExpanded && bookSummary.chapters?.[chapter] && (
                       <p style={{ 
                         fontSize: '0.8rem', 
                         color: 'var(--text-secondary)', 
@@ -798,7 +800,7 @@ export default function BibleReader() {
                         whiteSpace: 'nowrap',
                         maxWidth: '280px'
                       }}>
-                        {bookSummaries[book].chapters[chapter]}
+                        {bookSummary.chapters[chapter]}
                       </p>
                     )}
                   </div>
@@ -822,7 +824,7 @@ export default function BibleReader() {
                 <div className="fade-in" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   
                   {/* Chapter Summary */}
-                  {bookSummaries[book].chapters?.[chapter] && (
+                  {bookSummary.chapters?.[chapter] && (
                     <div style={{
                       padding: '12px 14px',
                       borderRadius: 'var(--radius-sm)',
@@ -833,7 +835,7 @@ export default function BibleReader() {
                         Chapter Overview
                       </div>
                       <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5, color: 'var(--text-primary)' }}>
-                        {bookSummaries[book].chapters[chapter]}
+                        {bookSummary.chapters[chapter]}
                       </p>
                     </div>
                   )}
@@ -884,21 +886,21 @@ export default function BibleReader() {
                             </h4>
                           </div>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {bookSummaries[book].author && (
+                            {bookSummary.author && (
                               <span className="badge badge-purple" style={{ textTransform: 'none' }}>
-                                Author: {bookSummaries[book].author}
+                                Author: {bookSummary.author}
                               </span>
                             )}
-                            {bookSummaries[book].writtenTo && (
+                            {bookSummary.writtenTo && (
                               <span className="badge badge-blue" style={{ textTransform: 'none' }}>
-                                Audience: {bookSummaries[book].writtenTo}
+                                Audience: {bookSummary.writtenTo}
                               </span>
                             )}
                           </div>
                         </div>
 
                         <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          {bookSummaries[book].summary}
+                          {bookSummary.summary}
                         </p>
                       </div>
                     )}
@@ -939,13 +941,13 @@ export default function BibleReader() {
                         gap: '14px'
                       }}>
                         {/* Key Themes */}
-                        {bookSummaries[book].keyThemes && bookSummaries[book].keyThemes.length > 0 && (
+                        {bookSummary.keyThemes && bookSummary.keyThemes.length > 0 && (
                           <div>
                             <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                               Major Themes
                             </span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {bookSummaries[book].keyThemes.map((theme, i) => (
+                              {bookSummary.keyThemes.map((theme, i) => (
                                 <span key={i} className="theme-tag">
                                   {theme}
                                 </span>
@@ -955,13 +957,13 @@ export default function BibleReader() {
                         )}
 
                         {/* Important Notes */}
-                        {bookSummaries[book].importantNotes && bookSummaries[book].importantNotes.length > 0 && (
+                        {bookSummary.importantNotes && bookSummary.importantNotes.length > 0 && (
                           <div>
                             <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                               Key Teaching Points
                             </span>
                             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              {bookSummaries[book].importantNotes.map((note, idx) => (
+                              {bookSummary.importantNotes.map((note, idx) => (
                                 <li key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
                                   {note}
                                 </li>
@@ -1313,9 +1315,10 @@ export default function BibleReader() {
               <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
 
               <button 
-                onClick={() => {
+                onClick={async () => {
                   const firstSelected = selectedVerses[0] || selectedVerse;
                   if (!firstSelected) return;
+                  const { lookupBiblicalWord } = await import('../data/biblicalDictionary');
                   const cleanText = firstSelected.text.replace(/<[^>]*>?/gm, '');
                   const rawWords = cleanText.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
                   const keyWord = rawWords.find(w => lookupBiblicalWord(w)) || 

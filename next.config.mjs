@@ -1,10 +1,54 @@
 import withPWAInit from "@ducanh2912/next-pwa";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+// Translations downloaded for offline use on first visit (~10 MB over the network, ~51 MB stored).
+// Every other translation is saved the first time it's opened (runtime rule below).
+const OFFLINE_TRANSLATIONS = ["kjv", "ta_offline", "hindi_offline", "net", "web", "asv", "kjvpce"];
+
+// Content hash as the precache revision, so phones re-download a file only when it changes
+const offlineTranslationEntries = OFFLINE_TRANSLATIONS.map((name) => ({
+  url: `/${name}.json`,
+  revision: createHash("md5").update(readFileSync(new URL(`./public/${name}.json`, import.meta.url))).digest("hex"),
+}));
 
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  register: true,
-  skipWaiting: true,
+  // Registered by app/components/ServiceWorkerRegistration.js instead: the plugin's
+  // workbox-window registration throws where service workers are blocked.
+  register: false,
+  // Don't precache the whole public folder's JSON (all 15 translations, ~105 MB);
+  // only OFFLINE_TRANSLATIONS are added back via additionalManifestEntries.
+  publicExcludes: ["!noprecache/**/*", "!*.json", "!book-details/**/*"],
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    skipWaiting: true,
+    clientsClaim: true,
+    additionalManifestEntries: offlineTranslationEntries,
+    runtimeCaching: [
+      {
+        // public/<translation>.json — keep for offline reading once opened
+        urlPattern: ({ url, sameOrigin }) =>
+          sameOrigin && /^\/[a-z0-9_]+\.json$/.test(url.pathname) && url.pathname !== "/manifest.json",
+        handler: "CacheFirst",
+        options: {
+          cacheName: "bible-translations",
+          expiration: { maxEntries: 20, purgeOnQuotaError: true },
+          cacheableResponse: { statuses: [200] },
+        },
+      },
+      {
+        urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/book-details/"),
+        handler: "CacheFirst",
+        options: {
+          cacheName: "book-details",
+          expiration: { maxEntries: 80, purgeOnQuotaError: true },
+          cacheableResponse: { statuses: [200] },
+        },
+      },
+    ],
+  },
 });
 
 /** @type {import('next').NextConfig} */
