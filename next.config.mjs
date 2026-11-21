@@ -71,6 +71,21 @@ const nextConfig = {
           { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
           { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://*.tile.openstreetmap.org https://tile.openstreetmap.org; media-src 'self' https://api.dictionaryapi.dev https://ssl.gstatic.com https://commons.wikimedia.org blob: data:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://api.dictionaryapi.dev https://www.hebcal.com https://nominatim.openstreetmap.org https://bible-api.com; frame-src 'self' https://www.openstreetmap.org https://*.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;" }
         ]
+      },
+      {
+        // Chosen Reels player for the iPhone app (public/player.html). It must be
+        // shown inside the app (capacitor://localhost) and show YouTube inside
+        // itself, so it gets its own rules; later entries win for the same header.
+        // frame-ancestors takes precedence over X-Frame-Options in browsers.
+        source: '/player.html',
+        headers: [
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Permissions-Policy', value: 'autoplay=*, encrypted-media=*, picture-in-picture=*, camera=(), microphone=(), geolocation=()' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+          { key: 'Content-Security-Policy', value: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-src https://www.youtube.com; frame-ancestors https: http: capacitor: ionic:; base-uri 'none'; form-action 'none'" }
+        ]
       }
     ];
   }
